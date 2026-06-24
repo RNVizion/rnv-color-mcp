@@ -1,0 +1,1 @@
+"""RNV color engine — Qt-free logic lifted from the desktop suite."""
