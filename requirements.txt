@@ -1,0 +1,3 @@
+# Engine + store are standard-library only.
+# Phase 2 (server) will add:
+# fastmcp
