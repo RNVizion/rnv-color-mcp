@@ -6,7 +6,7 @@ HF_USER=RNVizion
 
 # Token: set HF_TOKEN as a Codespace secret (like your ANTHROPIC_API_KEY),
 # or pass it as an argument:  bash phs.sh hf_xxxxxxxx
-TOKEN="${HF_TOKEN:-$1}"
+TOKEN="${HF_COLOR:-$1}"
 if [ -z "$TOKEN" ]; then echo "Need a token: set HF_TOKEN secret or run: bash phs.sh <token>"; exit 1; fi
 
 # 1. Add the Docker frontmatter to README.md (only if not already there)
