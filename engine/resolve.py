@@ -19,19 +19,9 @@ from __future__ import annotations
 
 import re
 
-# --- RNV brand vocabulary (your dialect; edit here to teach the server new brand colors) ---
-RNV_BRAND: dict[str, str] = {
-    "near-black": "#1a1a1a",
-    "near black": "#1a1a1a",
-    "brand black": "#1a1a1a",
-    "rnv black": "#1a1a1a",
-    "gold": "#d2bc93",
-    "brand gold": "#d2bc93",
-    "rnv gold": "#d2bc93",
-    "dark gold": "#b19145",
-    "gold dark": "#b19145",
-    "light-mode gold": "#b19145",
-}
+from engine.brand import RNV_BRAND
+
+# RNV brand vocabulary now lives in engine/brand.py (single source of truth).
 
 # --- universal CSS / X11 named colors (baked from matplotlib CSS4; no runtime dep) ---
 CSS_NAMES: dict[str, str] = {

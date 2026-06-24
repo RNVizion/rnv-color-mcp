@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import api
 from engine.palette_store import PaletteStore
 
-BRAND_NEAR_BLACK = "#0a0a0f"
+BRAND_NEAR_BLACK = "#1a1a1a"
 BRAND_GOLD = "#d2bc93"
 
 
