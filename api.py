@@ -10,12 +10,14 @@ Palette store: save_palette, list_palettes, get_palette
 """
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from engine.color_math import ColorMath
 from engine.color_harmony import generate_harmony as _harmony_by_name
 from engine.text_transform import TextTransformer
 from engine.palette_store import PaletteStore
+from engine.resolve import resolve_color
 
 # ---- mix mode -> ColorMath method ---------------------------------------
 _MIX_MODES = {
@@ -27,8 +29,9 @@ _MIX_MODES = {
     "cmy": ColorMath.subtractive_cmy_mix,  # subtractive (like printer inks)
 }
 
-# A single shared store instance; the server can override the path in Phase 2.
-_store = PaletteStore()
+# A single shared store instance; path is configurable for deployment (persistent
+# storage on the Space). Defaults to a local file for dev / Codespace.
+_store = PaletteStore(os.environ.get("RNV_PALETTE_STORE", "palettes.json"))
 
 
 # ---- color engine -------------------------------------------------------
@@ -48,7 +51,7 @@ def mix_colors(
     if len(weights) != len(colors):
         raise ValueError("weights must match the number of colors.")
 
-    rgb_list = [ColorMath.hex_to_rgb(c) for c in colors]
+    rgb_list = [ColorMath.hex_to_rgb(resolve_color(c, _store)) for c in colors]
     colors_weights = list(zip(rgb_list, weights))
     mixed = _MIX_MODES[mode](colors_weights)
     if mixed is None:
@@ -59,7 +62,7 @@ def mix_colors(
 def convert_color(color: str, to: str | None = None) -> dict[str, Any]:
     """Convert a hex color between formats. With `to`, returns just that format;
     otherwise returns all of hex/rgb/hsv/hsl/lab."""
-    rgb = ColorMath.hex_to_rgb(color)
+    rgb = ColorMath.hex_to_rgb(resolve_color(color, _store))
     all_formats = {
         "hex": ColorMath.rgb_to_hex(rgb),
         "rgb": list(rgb),
@@ -79,7 +82,7 @@ def generate_harmony(base: str, scheme: str) -> list[str]:
     """Generate a color harmony from a base hex color. scheme is one of
     complementary | analogous | triadic | split-complementary |
     tetradic/square | monochromatic | compound."""
-    rgb = ColorMath.hex_to_rgb(base)
+    rgb = ColorMath.hex_to_rgb(resolve_color(base, _store))
     result = _harmony_by_name(rgb, scheme)
     return [ColorMath.rgb_to_hex(c) for c in result]
 
