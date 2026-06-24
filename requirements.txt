@@ -1,3 +1,2 @@
-# Engine + store are standard-library only.
-# Phase 2 (server) will add:
-# fastmcp
+# Engine, store, and resolver are standard-library only.
+fastmcp>=3.4,<4
