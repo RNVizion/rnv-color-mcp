@@ -21,13 +21,16 @@ import re
 
 # --- RNV brand vocabulary (your dialect; edit here to teach the server new brand colors) ---
 RNV_BRAND: dict[str, str] = {
-    "near-black": "#0a0a0f",
-    "near black": "#0a0a0f",
-    "brand black": "#0a0a0f",
-    "rnv black": "#0a0a0f",
+    "near-black": "#1a1a1a",
+    "near black": "#1a1a1a",
+    "brand black": "#1a1a1a",
+    "rnv black": "#1a1a1a",
     "gold": "#d2bc93",
     "brand gold": "#d2bc93",
     "rnv gold": "#d2bc93",
+    "dark gold": "#b19145",
+    "gold dark": "#b19145",
+    "light-mode gold": "#b19145",
 }
 
 # --- universal CSS / X11 named colors (baked from matplotlib CSS4; no runtime dep) ---
