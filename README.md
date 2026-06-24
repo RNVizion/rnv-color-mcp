@@ -15,6 +15,9 @@ Phase 2 (the FastMCP server) is next. See `RNV_MCP_Color_Server_RUNBOOK.md`.
 
 ## Tools
 
+Every color input accepts a hex, a CSS name (`red`), an RNV brand name (`brand gold`,
+`near-black`), or a saved-palette reference (`Spring line`, `Spring line:2`).
+
 **Color** — `mix_colors` (modes: rgb, hsv, lab, paint, ryb, cmy), `convert_color`,
 `generate_harmony` (complementary, analogous, triadic, split-complementary, tetradic/square,
 monochromatic, compound)
@@ -30,7 +33,9 @@ engine/            Qt-free logic (verbatim lift + new store)
   text_transform.py    case operations (from text-transformer)
   palette_metadata.py  palette schema (from palette-manager)
   palette_store.py     NEW: single-file JSON store, app-compatible schema
-api.py             the 7 tools as plain functions (the seam Phase 2 decorates)
+  resolve.py           NEW: color name resolution (RNV brand + palettes + CSS names)
+api.py             the 7 tools as plain functions (the seam the server decorates)
+server.py          FastMCP server: registers the 7 tools, Streamable HTTP
 tests/smoke_test.py   proves the engine + store run standalone
 ```
 
@@ -40,4 +45,13 @@ tests/smoke_test.py   proves the engine + store run standalone
 python tests/smoke_test.py
 ```
 
-No dependencies — engine and store are standard-library only. FastMCP arrives in Phase 2.
+Engine, store, and resolver are standard-library only; the server needs `fastmcp`.
+
+## Run the server
+
+```bash
+pip install -r requirements.txt
+python server.py   # Streamable HTTP on PORT (default 7860)
+```
+
+Set `RNV_PALETTE_STORE` to a persistent path (e.g. `/data/palettes.json` on a Space) so saved palettes survive restarts.
