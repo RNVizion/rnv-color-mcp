@@ -1,3 +1,14 @@
+---
+title: RNV Color MCP
+emoji: 🎨
+colorFrom: gray
+colorTo: yellow
+sdk: docker
+app_port: 7860
+pinned: false
+short_description: Color workflow MCP server
+---
+
 # rnv-color-mcp
 
 A remote MCP server exposing the RNV color workflow: compute color, remember palettes,
