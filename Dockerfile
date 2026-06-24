@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 
 COPY --chown=user . .
 
-ENV RNV_PALETTE_STORE=/data/palettes.json
+ENV RNV_PALETTE_STORE=/home/user/app/data/palettes.json
 ENV PORT=7860
 EXPOSE 7860
 

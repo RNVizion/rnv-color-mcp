@@ -1,2 +1,3 @@
 # Engine, store, and resolver are standard-library only.
 fastmcp>=3.4,<4
+huggingface_hub>=1.0,<2
