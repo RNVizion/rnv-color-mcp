@@ -1,18 +1,27 @@
 #!/bin/bash
-# finish_pr.sh  -  push the already-committed branch with the correct token, then open the PR.
-# Run after open_pr.sh stopped at the push step:
+# finish_pr.sh  -  push the committed branch with your REAL login token, then open the PR.
 #     bash finish_pr.sh
 set -e
 
 cd "$HOME/awesome-mcp-servers" 2>/dev/null || {
   echo "Can't find ~/awesome-mcp-servers. Re-run: bash open_pr.sh"; exit 1; }
 
-# Make git use the gh-authenticated token (not the limited Codespace token)
-gh auth setup-git
+# CRITICAL: drop the limited Codespace token so gh + git use your gh login instead.
+unset GITHUB_TOKEN GH_TOKEN
+
+echo "Which account/token gh is using now:"
+gh auth status 2>&1 | grep -iE "Logged in|Token scopes" || true
+echo ""
+
 TOKEN=$(gh auth token)
+if [ -z "$TOKEN" ]; then
+  echo "gh has no stored token. Run this, then re-run finish_pr.sh:"
+  echo "    unset GITHUB_TOKEN GH_TOKEN && gh auth login -h github.com -p https -s repo -w"
+  exit 1
+fi
 
 echo "Pushing branch to your fork ..."
-git push "https://RNVizion:${TOKEN}@github.com/RNVizion/awesome-mcp-servers.git" add-rnv-color-mcp --force
+git push "https://x-access-token:${TOKEN}@github.com/RNVizion/awesome-mcp-servers.git" add-rnv-color-mcp --force
 
 echo "Opening the pull request ..."
 gh pr create --repo punkpeye/awesome-mcp-servers \
