@@ -231,6 +231,85 @@ class ColorMath:
         )
     
     @staticmethod
+    def delta_e(rgb1: RGB, rgb2: RGB, method: str = "ciede2000") -> float:
+        """Perceptual color difference between two RGB colors.
+
+        method: "ciede2000" (modern standard, default) or "cie76" (Lab Euclidean).
+        ~1.0 is the threshold of a just-noticeable difference to the human eye.
+        """
+        L1, a1, b1 = ColorMath.rgb_to_lab(rgb1)
+        L2, a2, b2 = ColorMath.rgb_to_lab(rgb2)
+        if method == "cie76":
+            return math.sqrt((L2 - L1) ** 2 + (a2 - a1) ** 2 + (b2 - b1) ** 2)
+        # CIEDE2000 (Sharma et al. formulation)
+        kL = kC = kH = 1.0
+        C1 = math.hypot(a1, b1)
+        C2 = math.hypot(a2, b2)
+        Cbar = (C1 + C2) / 2.0
+        Cbar7 = Cbar ** 7
+        G = 0.5 * (1 - math.sqrt(Cbar7 / (Cbar7 + 25.0 ** 7))) if Cbar7 else 0.0
+        a1p = (1 + G) * a1
+        a2p = (1 + G) * a2
+        C1p = math.hypot(a1p, b1)
+        C2p = math.hypot(a2p, b2)
+        h1p = math.degrees(math.atan2(b1, a1p)) % 360.0
+        h2p = math.degrees(math.atan2(b2, a2p)) % 360.0
+        dLp = L2 - L1
+        dCp = C2p - C1p
+        if C1p * C2p == 0:
+            dhp = 0.0
+        else:
+            diff = h2p - h1p
+            if diff > 180:
+                diff -= 360
+            elif diff < -180:
+                diff += 360
+            dhp = diff
+        dHp = 2 * math.sqrt(C1p * C2p) * math.sin(math.radians(dhp / 2.0))
+        Lbarp = (L1 + L2) / 2.0
+        Cbarp = (C1p + C2p) / 2.0
+        if C1p * C2p == 0:
+            hbarp = h1p + h2p
+        elif abs(h1p - h2p) > 180:
+            hbarp = (h1p + h2p + 360) / 2.0 if (h1p + h2p) < 360 else (h1p + h2p - 360) / 2.0
+        else:
+            hbarp = (h1p + h2p) / 2.0
+        T = (1 - 0.17 * math.cos(math.radians(hbarp - 30))
+             + 0.24 * math.cos(math.radians(2 * hbarp))
+             + 0.32 * math.cos(math.radians(3 * hbarp + 6))
+             - 0.20 * math.cos(math.radians(4 * hbarp - 63)))
+        dtheta = 30 * math.exp(-(((hbarp - 275) / 25.0) ** 2))
+        Cbarp7 = Cbarp ** 7
+        Rc = 2 * math.sqrt(Cbarp7 / (Cbarp7 + 25.0 ** 7)) if Cbarp7 else 0.0
+        Sl = 1 + (0.015 * (Lbarp - 50) ** 2) / math.sqrt(20 + (Lbarp - 50) ** 2)
+        Sc = 1 + 0.045 * Cbarp
+        Sh = 1 + 0.015 * Cbarp * T
+        Rt = -math.sin(math.radians(2 * dtheta)) * Rc
+        return math.sqrt(
+            (dLp / (kL * Sl)) ** 2
+            + (dCp / (kC * Sc)) ** 2
+            + (dHp / (kH * Sh)) ** 2
+            + Rt * (dCp / (kC * Sc)) * (dHp / (kH * Sh))
+        )
+
+    @staticmethod
+    def relative_luminance(rgb: RGB) -> float:
+        """WCAG relative luminance of a color (0.0 black .. 1.0 white)."""
+        def _lin(c: float) -> float:
+            c = c / 255.0
+            return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+        r, g, b = rgb
+        return 0.2126 * _lin(r) + 0.7152 * _lin(g) + 0.0722 * _lin(b)
+
+    @staticmethod
+    def contrast_ratio(rgb1: RGB, rgb2: RGB) -> float:
+        """WCAG contrast ratio between two colors (1.0 .. 21.0)."""
+        l1 = ColorMath.relative_luminance(rgb1)
+        l2 = ColorMath.relative_luminance(rgb2)
+        lighter, darker = max(l1, l2), min(l1, l2)
+        return (lighter + 0.05) / (darker + 0.05)
+
+    @staticmethod
     def lab_perceptual_mix(colors_weights: list[ColorWeight]) -> RGB | None:
         """
         Mix colors in LAB color space for perceptually uniform blending.

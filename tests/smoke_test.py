@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import api
 from engine.palette_store import PaletteStore
 
-BRAND_NEAR_BLACK = "#1a1a1a"
+BRAND_NEAR_BLACK = "#1a1a1a"  # canonical brand black (charcoal)
 BRAND_GOLD = "#d2bc93"
 
 
@@ -74,6 +74,44 @@ def main() -> None:
         base = api.get_palette("Spring line")["colors"][0]
         accents = api.generate_harmony(base, "complementary")
         print(f"compose (get->harmony) -> base {base} accents {accents}")
+
+    # 7. plain-language resolution: CSS names, RNV brand, palette refs, refusal
+    print("name resolution:")
+    rb = api.mix_colors(["red", "blue"], mode="rgb")
+    print(f"  mix red + blue (rgb)        -> {rb['hex']}")
+    bg = api.convert_color("brand gold", to="hex")
+    assert bg["hex"] == BRAND_GOLD, "RNV 'brand gold' should be #d2bc93"
+    print(f"  convert 'brand gold'        -> {bg['hex']}")
+    d = api.color_difference("brand gold", "dark gold")
+    assert d["delta_e"] > 0, "distinct colors should differ"
+    print(f"  color_difference(gold, dark gold)  -> dE {d['delta_e']}")
+    c = api.contrast_check("brand gold", "near-black")
+    assert c["ratio"] > 1 and c["wcag"]["AA_normal_text"], "gold on near-black should pass AA"
+    print(f"  contrast_check(gold/near-black)    -> {c['display']} AA={c['wcag']['AA_normal_text']}")
+    nb = api.convert_color("near-black", to="hex")
+    assert nb["hex"] == BRAND_NEAR_BLACK, "RNV 'near-black' should be #1a1a1a"
+    print(f"  convert 'near-black'        -> {nb['hex']}")
+    # RNV layer beats CSS: bare 'gold' is RNV gold, 'css:gold' forces universal
+    assert api.convert_color("gold", to="hex")["hex"] == BRAND_GOLD, "'gold' should be RNV"
+    assert api.convert_color("css:gold", to="hex")["hex"] == "#ffd700", "'css:gold' should be CSS"
+    print(f"  'gold' (RNV) vs 'css:gold'  -> {api.convert_color('gold')['hex']} vs "
+          f"{api.convert_color('css:gold')['hex']}")
+    # harmony from a brand name and from a saved-palette reference
+    with tempfile.TemporaryDirectory() as d:
+        api._store = PaletteStore(Path(d) / "palettes.json")
+        api.save_palette("Spring line", [BRAND_NEAR_BLACK, BRAND_GOLD, "#ffffff"])
+        h_name = api.generate_harmony("brand gold", "complementary")
+        h_ref = api.generate_harmony("Spring line:2", "complementary")  # 2nd swatch = gold
+        print(f"  harmony 'brand gold'        -> {h_name}")
+        print(f"  harmony 'Spring line:2'     -> {h_ref}")
+        assert h_name == h_ref, "brand gold and Spring line's 2nd swatch should match"
+    # refusal: an unknown token is refused, not guessed
+    from engine.resolve import UnknownColor
+    try:
+        api.convert_color("definitely-not-a-color")
+        failures.append("expected UnknownColor for unknown token")
+    except UnknownColor:
+        print("  unknown token              -> refused (UnknownColor), not guessed")
 
     if failures:
         print("\nFAILURES:", failures)

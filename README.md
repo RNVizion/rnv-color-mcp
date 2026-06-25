@@ -35,6 +35,8 @@ owns the precise values. The server resolves or it refuses; it never guesses a c
 | `mix_colors` | Blend up to 12 colors. Modes: `rgb`, `hsv`, `lab` (digital) and `paint` (Kubelka-Munk pigment physics), `ryb` (artist's wheel), `cmy` (subtractive). |
 | `convert_color` | Convert between hex, rgb, hsv, hsl, lab. |
 | `generate_harmony` | complementary, analogous, triadic, split-complementary, tetradic/square, monochromatic, compound. |
+| `color_difference` | Perceptual difference (Delta-E, CIEDE2000 or CIE76) between two colors. |
+| `contrast_check` | WCAG contrast ratio plus AA/AAA pass/fail for accessible text. |
 | `transform_text` | 11 exact case transforms (UPPERCASE, camelCase, snake_case, …). |
 | `save_palette` / `list_palettes` / `get_palette` | Name a palette, recall it later. Persists across restarts. |
 
@@ -71,7 +73,7 @@ averaged light does.
 ```bash
 pip install -r requirements.txt
 python server.py          # Streamable HTTP on $PORT (default 7860)
-python tests/server_test.py   # exercises all 7 tools in-process
+python tests/server_test.py   # exercises all 9 tools in-process
 ```
 
 Set `HF_TOKEN` to write palettes through to a private Hugging Face Dataset for durable storage.

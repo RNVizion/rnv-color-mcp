@@ -14,7 +14,8 @@ from fastmcp import Client
 from server import mcp
 
 EXPECTED_TOOLS = {
-    "mix_colors", "convert_color", "generate_harmony", "transform_text",
+    "mix_colors", "convert_color", "generate_harmony",
+    "color_difference", "contrast_check", "transform_text",
     "save_palette", "list_palettes", "get_palette",
 }
 
@@ -51,6 +52,18 @@ async def main() -> None:
         )
         print("generate_harmony(brand gold, complementary) ->", _text(r))
 
+        # delta-e between two brand-ish colors
+        r = await client.call_tool(
+            "color_difference", {"color1": "brand gold", "color2": "dark gold"}
+        )
+        print("color_difference(brand gold, dark gold) ->", _text(r))
+
+        # contrast check: gold text on near-black
+        r = await client.call_tool(
+            "contrast_check", {"foreground": "brand gold", "background": "near-black"}
+        )
+        print("contrast_check(brand gold on near-black) ->", _text(r))
+
         # text transform
         r = await client.call_tool(
             "transform_text", {"text": "the honest machine", "operation": "snake_case"}
@@ -65,7 +78,7 @@ async def main() -> None:
         r = await client.call_tool("get_palette", {"name": "Spring line"})
         print("get_palette(Spring line) ->", _text(r))
 
-    print("\nPhase 2 OK: client sees all 7 tools and gets correct results through FastMCP.")
+    print("\nPhase 2 OK: client sees all 9 tools and gets correct results through FastMCP.")
 
 
 if __name__ == "__main__":

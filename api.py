@@ -1,7 +1,8 @@
 """
 RNV Color MCP - API surface
 
-The seven locked tools, shaped as plain functions.
+The seven locked tools, shaped as plain functions. This is the seam: Phase 2 wraps each
+of these with @mcp.tool and a description; nothing else about the engine changes.
 
 Color engine : mix_colors, convert_color, generate_harmony
 Text         : transform_text
@@ -84,6 +85,53 @@ def generate_harmony(base: str, scheme: str) -> list[str]:
     rgb = ColorMath.hex_to_rgb(resolve_color(base, _store))
     result = _harmony_by_name(rgb, scheme)
     return [ColorMath.rgb_to_hex(c) for c in result]
+
+
+def color_difference(color1: str, color2: str, method: str = "ciede2000") -> dict[str, Any]:
+    """Perceptual difference (Delta-E) between two colors.
+    method: "ciede2000" (default, modern standard) or "cie76". A value near 1.0 is the
+    threshold a human eye can just notice; larger means more different."""
+    rgb1 = ColorMath.hex_to_rgb(resolve_color(color1, _store))
+    rgb2 = ColorMath.hex_to_rgb(resolve_color(color2, _store))
+    de = ColorMath.delta_e(rgb1, rgb2, method=method)
+    if de < 1:
+        note = "not perceptible by human eyes"
+    elif de < 2:
+        note = "perceptible on close inspection"
+    elif de < 10:
+        note = "perceptible at a glance"
+    elif de < 50:
+        note = "clearly different"
+    else:
+        note = "near-opposite colors"
+    return {
+        "delta_e": round(de, 4),
+        "method": method,
+        "interpretation": note,
+        "color1": ColorMath.rgb_to_hex(rgb1),
+        "color2": ColorMath.rgb_to_hex(rgb2),
+    }
+
+
+def contrast_check(foreground: str, background: str) -> dict[str, Any]:
+    """WCAG contrast ratio between a foreground and background color, with pass/fail
+    for each accessibility level. Ratio runs 1.0 (none) to 21.0 (black on white)."""
+    fg = ColorMath.hex_to_rgb(resolve_color(foreground, _store))
+    bg = ColorMath.hex_to_rgb(resolve_color(background, _store))
+    ratio = ColorMath.contrast_ratio(fg, bg)
+    return {
+        "ratio": round(ratio, 2),
+        "display": f"{round(ratio, 2)}:1",
+        "foreground": ColorMath.rgb_to_hex(fg),
+        "background": ColorMath.rgb_to_hex(bg),
+        "wcag": {
+            "AA_normal_text": ratio >= 4.5,
+            "AA_large_text": ratio >= 3.0,
+            "AAA_normal_text": ratio >= 7.0,
+            "AAA_large_text": ratio >= 4.5,
+            "AA_ui_components": ratio >= 3.0,
+        },
+    }
 
 
 # ---- text ---------------------------------------------------------------

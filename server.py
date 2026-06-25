@@ -1,7 +1,7 @@
 """
 RNV Color MCP - server
 
-Thin FastMCP wrapper over api.py. The seven tools are registered with descriptions written
+Thin FastMCP wrapper over api.py. The tools are registered with descriptions written
 for the model: the description is what an LLM reads to decide whether and how to call a tool,
 so each one is a capability statement, not a label.
 
@@ -61,6 +61,26 @@ mcp.tool(
         "brand name, or saved-palette reference (e.g. 'Spring line:2'). scheme is one of: "
         "complementary, analogous, triadic, split-complementary, tetradic (a.k.a. square), "
         "monochromatic, compound. Returns a list of hex colors."
+    ),
+)
+
+mcp.tool(
+    api.color_difference,
+    description=(
+        "Perceptual difference (Delta-E) between two colors. color1 and color2 accept a hex, "
+        "CSS name, RNV brand name, or saved-palette reference. method is 'ciede2000' (default, "
+        "modern standard) or 'cie76'. A value near 1.0 is the threshold the eye can just notice; "
+        "larger means more different. Returns the value and a plain-language interpretation."
+    ),
+)
+
+mcp.tool(
+    api.contrast_check,
+    description=(
+        "WCAG contrast ratio between a foreground and background color, for accessibility. "
+        "Both accept a hex, CSS name, RNV brand name, or saved-palette reference. Returns the "
+        "ratio (1.0-21.0) plus pass/fail for AA and AAA at normal and large text sizes and for "
+        "UI components. Use this to check if text will be readable on a background."
     ),
 )
 
