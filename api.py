@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from typing import Annotated
+from pydantic import BaseModel, Field
 
 from engine.color_math import ColorMath
 from engine.color_harmony import generate_harmony as _harmony_by_name
@@ -141,9 +143,45 @@ def transform_text(text: str, operation: str) -> dict[str, str]:
 
 
 # ---- palette store ------------------------------------------------------
-def save_palette(name: str, colors: list[str], notes: str = "") -> dict[str, Any]:
-    """Save (or update) a named palette for later reuse."""
-    return _store.save_palette(name, colors, notes)
+class SavePaletteResult(BaseModel):
+    name: str = Field(description="Name the palette was stored under.")
+    colors: list[str] = Field(description="The hex colors saved, in order.")
+    notes: str = Field(description="Description stored on the palette; empty if none given.")
+    color_count: int = Field(description="Number of colors in the saved palette.")
+    overwritten: bool = Field(
+        description="True if a palette with this name already existed and was replaced; False if newly created."
+    )
+
+
+def save_palette(
+    name: Annotated[str, Field(
+        description="Unique key the palette is stored under. Reusing an existing name overwrites that palette (upsert). Can be referenced later by other tools as 'name:index', e.g. 'Spring line:2'."
+    )],
+    colors: Annotated[list[str], Field(
+        description="Ordered list of hex colors, each '#RRGGBB' (e.g. '#d2bc93'). Order is preserved; at least one required."
+    )],
+    notes: Annotated[str, Field(
+        description="Optional human-readable description stored as the palette's notes."
+    )] = "",
+) -> SavePaletteResult:
+    """Persist a named color palette for later retrieval with get_palette or list_palettes.
+
+    Use when the user wants to keep a set of colors under a name for reuse across sessions,
+    such as a brand or launch palette. Idempotent upsert: a new name creates a palette, an
+    existing name replaces it. The saved name can then be referenced by convert_color and
+    generate_harmony as a palette reference. Author is recorded as RNVizion.
+    """
+    if not colors:
+        raise ValueError("Provide at least one color to save.")
+    existed = _store.get_palette(name) is not None
+    _store.save_palette(name, colors, notes)
+    return SavePaletteResult(
+        name=name,
+        colors=colors,
+        notes=notes,
+        color_count=len(colors),
+        overwritten=existed,
+    )
 
 
 def list_palettes() -> list[dict[str, Any]]:
