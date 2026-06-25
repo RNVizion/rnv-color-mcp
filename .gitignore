@@ -1,1 +1,2 @@
 *.sh
+.rebuild_marker
