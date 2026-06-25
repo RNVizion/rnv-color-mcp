@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 
 from fastmcp import FastMCP
+from starlette.responses import JSONResponse
 
 import api
 
@@ -30,6 +31,20 @@ mcp = FastMCP(
         "near-black), or saved-palette references."
     ),
 )
+
+
+# ---- glama ownership claim ----------------------------------------------
+# Served at https://rnvizion-rnv-color-mcp.hf.space/.well-known/glama.json so Glama can
+# verify ownership of this connector. The email must match the Glama account email.
+@mcp.custom_route("/.well-known/glama.json", methods=["GET"])
+async def glama_claim(request):
+    return JSONResponse(
+        {
+            "$schema": "https://glama.ai/mcp/schemas/connector.json",
+            "maintainers": [{"email": "vizionaryfx@yahoo.com"}],
+        }
+    )
+
 
 # ---- color engine -------------------------------------------------------
 mcp.tool(
@@ -99,9 +114,12 @@ mcp.tool(
 mcp.tool(
     api.save_palette,
     description=(
-        "Save (or update) a named palette for later reuse, e.g. a launch line. colors is a "
-        "list of hex values; optional notes are stored as the palette's description. Author "
-        "is recorded as RNVizion."
+        "Persist a named color palette for later retrieval with get_palette or list_palettes. "
+        "Use when the user wants to keep a set of colors under a name for reuse across sessions, "
+        "such as a brand or launch palette. colors is a list of hex values; reusing an existing "
+        "name overwrites that palette (upsert). Optional notes are stored as the palette's "
+        "description. The saved name can then be referenced by other tools (mix_colors, "
+        "convert_color, generate_harmony) as a palette reference. Author is recorded as RNVizion."
     ),
 )
 
