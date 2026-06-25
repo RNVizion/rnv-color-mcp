@@ -9,7 +9,7 @@ pinned: false
 short_description: Color workflow MCP server
 ---
 
-<!-- mcp-name: io.github.rnvizion/rnv-color-mcp -->
+<!-- mcp-name: io.github.RNVizion/rnv-color-mcp -->
 
 # RNV Color MCP
 

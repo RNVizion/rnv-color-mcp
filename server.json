@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
-  "name": "io.github.rnvizion/rnv-color-mcp",
+  "name": "io.github.RNVizion/rnv-color-mcp",
   "description": "A complete color workflow over MCP: mix, convert, harmonize, and remember palettes.",
   "version": "1.0.0",
   "repository": {
