@@ -1,8 +1,7 @@
 """
 RNV Color MCP - API surface
 
-The seven locked tools, shaped as plain functions. This is the seam: Phase 2 wraps each
-of these with @mcp.tool and a description; nothing else about the engine changes.
+The seven locked tools, shaped as plain functions.
 
 Color engine : mix_colors, convert_color, generate_harmony
 Text         : transform_text
