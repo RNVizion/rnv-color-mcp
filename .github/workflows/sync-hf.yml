@@ -1,0 +1,30 @@
+name: Sync to Hugging Face Space
+
+# Mirrors this GitHub repo to the HF Space on every push to main, so the live
+# server is never stale relative to GitHub. GitHub is the source of truth; the
+# Space is a mirror.
+#
+# Requires the GitHub Actions secret HF_SYNC_TOKEN: a Hugging Face WRITE token
+# (the hf_... value) scoped to the RNVizion/rnv-color-mcp Space.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # allow manual runs from the Actions tab
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full history; a shallow clone can't push cleanly
+
+      - name: Push to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_SYNC_TOKEN }}
+        run: |
+          git push --force \
+            "https://RNVizion:${HF_TOKEN}@huggingface.co/spaces/RNVizion/rnv-color-mcp" \
+            main:main
