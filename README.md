@@ -13,6 +13,8 @@ short_description: Color workflow MCP server
 
 # RNV Color MCP
 
+[![rnv-color-mcp MCP server](https://glama.ai/mcp/servers/RNVizion/rnv-color-mcp/badges/card.svg)](https://glama.ai/mcp/servers/RNVizion/rnv-color-mcp)
+
 A remote [MCP](https://modelcontextprotocol.io) server for a complete color workflow:
 mix, convert, harmonize, and remember palettes, called in plain language by Claude (or any
 MCP client), and by anything else that speaks MCP.
