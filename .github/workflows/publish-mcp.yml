@@ -1,0 +1,75 @@
+name: Publish to MCP Registry
+
+# Publishes server.json to the official MCP Registry when a version tag is pushed,
+# then commits the version-stamped server.json back to main so the repo always
+# reflects the last published version.
+#
+# Trigger: push a tag like v1.2.0  ->  publishes version 1.2.0.
+# The tag is the single source of truth: the workflow stamps the tag's version into
+# server.json, publishes, then commits the stamped file back to main.
+#
+# Auth: GitHub OIDC for the registry (no secret needed; the io.github.RNVizion/*
+# namespace is owned by this repo's owner). The commit-back uses the default
+# GITHUB_TOKEN.
+#
+# NOTE ON THE HF SYNC: the commit-back is made with GITHUB_TOKEN, and by GitHub's
+# design a GITHUB_TOKEN commit does NOT trigger other workflows. So this commit-back
+# updates GitHub but does NOT auto-fire sync-hf.yml. That is intentional and fine:
+# server.json is registry metadata, not something the running Space uses, so the HF
+# copy is cosmetic. It rides over to the Space on your next normal commit to main.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # write: needed to commit the stamped server.json back
+      id-token: write       # needed for OIDC authentication to the registry
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main         # check out the branch, not the detached tag, so we can commit back
+          fetch-depth: 0
+
+      - name: Stamp version from tag into server.json
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"   # v1.2.0 -> 1.2.0
+          echo "Publishing version: $VERSION"
+          python3 - "$VERSION" <<'PY'
+          import json, sys
+          version = sys.argv[1]
+          with open("server.json") as f:
+              data = json.load(f)
+          data["version"] = version
+          with open("server.json", "w") as f:
+              json.dump(data, f, indent=2)
+              f.write("\n")
+          print(f"server.json version set to {version}")
+          PY
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server.json
+        run: ./mcp-publisher publish
+
+      - name: Commit stamped server.json back to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet server.json; then
+            echo "server.json already at this version; nothing to commit."
+          else
+            git add server.json
+            git commit -m "chore: stamp server.json to ${GITHUB_REF_NAME#v} [skip ci]"
+            git push origin main
+          fi
