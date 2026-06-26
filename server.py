@@ -54,9 +54,15 @@ mcp.tool(
         "(red), an RNV brand name (brand gold, near-black), or a saved-palette reference "
         "(Spring line, or 'Spring line:2' for its 2nd swatch). Optional integer weights "
         "bias the blend (defaults to equal). mode selects the model: rgb/hsv/lab are "
-        "digital blends (lab is perceptual and the default); paint mixes pigments via "
-        "Kubelka-Munk physics (colors darken like real paint); ryb is the artist's color "
-        "wheel; cmy is subtractive like printer inks. Returns hex and rgb."
+        "digital blends (lab is perceptual and the default, best for on-screen color); "
+        "paint mixes pigments via Kubelka-Munk physics (colors darken like real paint, "
+        "use it for physical-media matching); ryb is the artist's color wheel; cmy is "
+        "subtractive like printer inks. Returns hex and rgb. "
+        "Read-only and deterministic: it computes a result and stores nothing, so it is "
+        "safe to call repeatedly with no side effects. "
+        "Use to combine multiple colors into a single blend; to convert one color between "
+        "formats use convert_color, and to measure how far apart two colors are use "
+        "color_difference."
     ),
 )
 
@@ -65,7 +71,10 @@ mcp.tool(
     description=(
         "Convert a color between formats. Input accepts a hex, CSS name, RNV brand name, "
         "or saved-palette reference. With `to` set to one of hex/rgb/hsv/hsl/lab, returns "
-        "just that format; otherwise returns all of them."
+        "just that format; otherwise returns all of them. "
+        "Read-only and deterministic, with no side effects. "
+        "Use for format conversion of a single color; to blend several colors into one use "
+        "mix_colors, and to compare two colors use color_difference."
     ),
 )
 
@@ -75,7 +84,11 @@ mcp.tool(
         "Generate a color harmony from a base color. base accepts a hex, CSS name, RNV "
         "brand name, or saved-palette reference (e.g. 'Spring line:2'). scheme is one of: "
         "complementary, analogous, triadic, split-complementary, tetradic (a.k.a. square), "
-        "monochromatic, compound. Returns a list of hex colors."
+        "monochromatic, compound. Returns a list of hex colors. "
+        "Read-only and deterministic: it derives the colors from the base and stores "
+        "nothing, so it has no side effects and is safe to call repeatedly. "
+        "Use to expand one base color into a related set; to blend existing colors into a "
+        "single color use mix_colors, and to persist a set you like use save_palette."
     ),
 )
 
@@ -85,7 +98,10 @@ mcp.tool(
         "Perceptual difference (Delta-E) between two colors. color1 and color2 accept a hex, "
         "CSS name, RNV brand name, or saved-palette reference. method is 'ciede2000' (default, "
         "modern standard) or 'cie76'. A value near 1.0 is the threshold the eye can just notice; "
-        "larger means more different. Returns the value and a plain-language interpretation."
+        "larger means more different. Returns the value and a plain-language interpretation. "
+        "Read-only and deterministic, with no side effects. "
+        "Use ciede2000 for accuracy and pick cie76 only to match a legacy system; to test "
+        "whether text is legible on a background (not raw difference) use contrast_check instead."
     ),
 )
 
@@ -95,7 +111,10 @@ mcp.tool(
         "WCAG contrast ratio between a foreground and background color, for accessibility. "
         "Both accept a hex, CSS name, RNV brand name, or saved-palette reference. Returns the "
         "ratio (1.0-21.0) plus pass/fail for AA and AAA at normal and large text sizes and for "
-        "UI components. Use this to check if text will be readable on a background."
+        "UI components. "
+        "Read-only and deterministic, with no side effects. "
+        "Use this for legibility and accessibility checks; to measure raw perceptual "
+        "difference between two colors rather than readability use color_difference instead."
     ),
 )
 
@@ -105,8 +124,11 @@ mcp.tool(
     description=(
         "Apply an exact, deterministic text transformation. operation is one of: "
         "UPPERCASE, lowercase, 'Title Case', 'Sentence case', camelCase, PascalCase, "
-        "snake_case, CONSTANT_CASE, kebab-case, dot.case, 'iNVERTED cASE'. Use this rather "
-        "than converting case by hand."
+        "snake_case, CONSTANT_CASE, kebab-case, dot.case, 'iNVERTED cASE'. "
+        "Read-only and deterministic: it returns the transformed string and changes nothing, "
+        "safe to call repeatedly. "
+        "Use whenever exact, reproducible case formatting matters rather than rewriting the "
+        "text by hand or guessing the casing."
     ),
 )
 
@@ -115,24 +137,37 @@ mcp.tool(
     api.save_palette,
     description=(
         "Persist a named color palette for later retrieval with get_palette or list_palettes. "
+        "colors is a list of hex values; optional notes are stored as the palette's description. "
+        "Author is recorded as RNVizion. "
+        "This WRITES to the palette store and is the only tool here that does. Reusing an "
+        "existing name overwrites that palette: save and update are the same call (an upsert), "
+        "there is no separate update operation. "
         "Use when the user wants to keep a set of colors under a name for reuse across sessions, "
-        "such as a brand or launch palette. colors is a list of hex values; reusing an existing "
-        "name overwrites that palette (upsert). Optional notes are stored as the palette's "
-        "description. The saved name can then be referenced by other tools (mix_colors, "
-        "convert_color, generate_harmony) as a palette reference. Author is recorded as RNVizion."
+        "such as a brand or launch palette; to read a palette back use get_palette, and to see "
+        "what already exists use list_palettes. The saved name can then be passed to mix_colors, "
+        "convert_color, and generate_harmony as a palette reference."
     ),
 )
 
 mcp.tool(
     api.list_palettes,
-    description="List every saved palette as name + colors.",
+    description=(
+        "List every saved palette as name + colors. "
+        "Read-only; no side effects. "
+        "Use to discover what palettes exist or to find a name before calling get_palette; to "
+        "fetch one palette's full detail use get_palette, and to create or overwrite one use "
+        "save_palette."
+    ),
 )
 
 mcp.tool(
     api.get_palette,
     description=(
         "Retrieve one saved palette by name, returning its colors and metadata. Returns "
-        "null if no palette by that name exists."
+        "null if no palette by that name exists. "
+        "Read-only; no side effects. "
+        "Use when you already know the palette name; to list available names first use "
+        "list_palettes, and to create or update a palette use save_palette."
     ),
 )
 
