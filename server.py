@@ -9,9 +9,11 @@ Run locally / in a Codespace:
     pip install -r requirements.txt
     python server.py                      # Streamable HTTP on PORT (default 7860)
 
-Transport is Streamable HTTP ("http"); connect by URL. Set RNV_PALETTE_STORE to a persistent
-path (e.g. /data/palettes.json on a Space with persistent storage) so saved palettes survive
-restarts.
+Transport is Streamable HTTP ("http"); connect by URL. Durable palette storage is via HF
+Dataset write-through: set HF_TOKEN (an HF write token) and optionally RNV_PALETTE_DATASET,
+and every save is pushed to a private Dataset that the store re-hydrates on startup, so
+palettes survive rebuilds. (RNV_PALETTE_STORE only sets the local working-copy path, which is
+ephemeral on a free Space; it is not the durability mechanism.)
 """
 from __future__ import annotations
 
@@ -142,6 +144,9 @@ mcp.tool(
         "This WRITES to the palette store and is the only tool here that does. Reusing an "
         "existing name overwrites that palette: save and update are the same call (an upsert), "
         "there is no separate update operation. "
+        "Returns a `durable` flag: true if the palette reached durable storage (the HF Dataset) "
+        "and will survive a restart, false if it saved to the local working copy only (which is "
+        "lost on rebuild, e.g. when the Space HF_TOKEN is missing or lacks write scope). "
         "Use when the user wants to keep a set of colors under a name for reuse across sessions, "
         "such as a brand or launch palette; to read a palette back use get_palette, and to see "
         "what already exists use list_palettes. The saved name can then be passed to mix_colors, "
