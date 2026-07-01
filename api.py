@@ -151,6 +151,9 @@ class SavePaletteResult(BaseModel):
     overwritten: bool = Field(
         description="True if a palette with this name already existed and was replaced; False if newly created."
     )
+    durable: bool = Field(
+        description="True if the palette was written through to the durable HF Dataset and will survive a Space rebuild; False if it saved to the local working copy only (e.g. the Space HF_TOKEN is missing or lacks write scope), meaning it will be lost on the next restart."
+    )
 
 
 def save_palette(
@@ -170,17 +173,22 @@ def save_palette(
     such as a brand or launch palette. Idempotent upsert: a new name creates a palette, an
     existing name replaces it. The saved name can then be referenced by convert_color and
     generate_harmony as a palette reference. Author is recorded as RNVizion.
+
+    The returned `durable` flag reports whether the save reached durable storage (the HF
+    Dataset) or only the local working copy; a False here means the palette will not survive
+    a Space rebuild and the Space's HF_TOKEN should be checked.
     """
     if not colors:
         raise ValueError("Provide at least one color to save.")
     existed = _store.get_palette(name) is not None
-    _store.save_palette(name, colors, notes)
+    result = _store.save_palette(name, colors, notes)
     return SavePaletteResult(
         name=name,
         colors=colors,
         notes=notes,
         color_count=len(colors),
         overwritten=existed,
+        durable=bool(result.get("durable", False)),
     )
 
 
