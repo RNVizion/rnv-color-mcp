@@ -1,3 +1,5 @@
+sed -n '30,75p' server.py
+
 echo "=== is anything listening on 7860? ==="
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:7860/ || echo "nothing there"
 
