@@ -24,6 +24,40 @@ from starlette.responses import JSONResponse
 
 import api
 
+# ---- auth (Stage 2: token verification, opt-in) ------------------------------
+# Off by default. With RNV_AUTH unset, this returns None and the server behaves
+# exactly as before: every tool reachable, no token required. Set RNV_AUTH=1 to
+# require a valid bearer token on every request. This is a pure resource-server
+# check: it validates a JWT's signature, issuer, and audience and issues nothing.
+#
+# Key source (set exactly one when RNV_AUTH=1):
+#   RNV_AUTH_JWKS_URI    a provider's JWKS endpoint (WorkOS, Descope, ... later)
+#   RNV_AUTH_PUBLIC_KEY  a static PEM public key (self-issued, for solo dev now)
+# Moving from a self-issued key to a real provider later is a config change here,
+# not a code change: set JWKS_URI instead of PUBLIC_KEY.
+def _build_auth():
+    if os.environ.get("RNV_AUTH", "").lower() not in ("1", "true", "yes", "on"):
+        return None
+
+    from fastmcp.server.auth.providers.jwt import JWTVerifier
+
+    issuer = os.environ.get("RNV_AUTH_ISSUER", "https://rnvizion.dev")
+    audience = os.environ.get(
+        "RNV_AUTH_AUDIENCE", "https://rnvizion-rnv-color-mcp.hf.space/mcp"
+    )
+    jwks_uri = os.environ.get("RNV_AUTH_JWKS_URI")
+    public_key = os.environ.get("RNV_AUTH_PUBLIC_KEY")
+
+    if jwks_uri:
+        return JWTVerifier(jwks_uri=jwks_uri, issuer=issuer, audience=audience)
+    if public_key:
+        return JWTVerifier(public_key=public_key, issuer=issuer, audience=audience)
+
+    raise RuntimeError(
+        "RNV_AUTH is on but no key source is set. "
+        "Set RNV_AUTH_JWKS_URI (a provider) or RNV_AUTH_PUBLIC_KEY (a PEM key)."
+    )
+
 mcp = FastMCP(
     name="rnv-color",
     instructions=(
