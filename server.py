@@ -66,6 +66,7 @@ mcp = FastMCP(
         "palettes. Color inputs accept hex, CSS names, RNV brand names (brand gold, "
         "near-black), or saved-palette references."
     ),
+    auth=_build_auth(),
 )
 
 
