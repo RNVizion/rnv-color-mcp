@@ -32,11 +32,9 @@ import api
 # not code: set RNV_AUTH_JWKS_URI + RNV_AUTH_ISSUER + RNV_AUTH_AUDIENCE.
 def _build_auth():
     raw = os.environ.get("RNV_AUTH", "")
-    print(f"[auth] RNV_AUTH={raw!r}", flush=True)
     if raw.lower() not in ("1", "true", "yes", "on"):
-        print("[auth] DISABLED — returning None, no route will mount", flush=True)
         return None
-    print("[auth] ENABLED — building RemoteAuthProvider", flush=True)
+   
 
 
     from fastmcp.server.auth import RemoteAuthProvider
