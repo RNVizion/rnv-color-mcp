@@ -1,5 +1,4 @@
-cd /workspaces/rnv-color-mcp && head -40 server.py
+sed -n '1,45p' server.py
 
-cat requirements.txt
+grep -n "custom_route\|glama\|@mcp\|def " server.py | head -30
 
-grep -n "save_palette" server.py
