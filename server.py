@@ -24,39 +24,46 @@ from starlette.responses import JSONResponse
 
 import api
 
-# ---- auth (Stage 2: token verification, opt-in) ------------------------------
-# Off by default. With RNV_AUTH unset, this returns None and the server behaves
-# exactly as before: every tool reachable, no token required. Set RNV_AUTH=1 to
-# require a valid bearer token on every request. This is a pure resource-server
-# check: it validates a JWT's signature, issuer, and audience and issues nothing.
-#
-# Key source (set exactly one when RNV_AUTH=1):
-#   RNV_AUTH_JWKS_URI    a provider's JWKS endpoint (WorkOS, Descope, ... later)
-#   RNV_AUTH_PUBLIC_KEY  a static PEM public key (self-issued, for solo dev now)
-# Moving from a self-issued key to a real provider later is a config change here,
-# not a code change: set JWKS_URI instead of PUBLIC_KEY.
+# ---- auth (Stage 3: token verification + OAuth discovery, opt-in) -------------
+# Off by default (RNV_AUTH unset -> returns None -> server unchanged). When on,
+# this validates bearer tokens AND serves RFC 9728 protected-resource metadata at
+# /.well-known/oauth-protected-resource, plus a spec-compliant WWW-Authenticate
+# challenge on 401. Moving to a real provider (Auth0, etc.) later is config here,
+# not code: set RNV_AUTH_JWKS_URI + RNV_AUTH_ISSUER + RNV_AUTH_AUDIENCE.
 def _build_auth():
     if os.environ.get("RNV_AUTH", "").lower() not in ("1", "true", "yes", "on"):
         return None
 
+    from fastmcp.server.auth import RemoteAuthProvider
     from fastmcp.server.auth.providers.jwt import JWTVerifier
+    from pydantic import AnyHttpUrl
 
     issuer = os.environ.get("RNV_AUTH_ISSUER", "https://rnvizion.dev")
     audience = os.environ.get(
         "RNV_AUTH_AUDIENCE", "https://rnvizion-rnv-color-mcp.hf.space/mcp"
     )
+    base_url = os.environ.get(
+        "RNV_AUTH_BASE_URL", "https://rnvizion-rnv-color-mcp.hf.space"
+    )
     jwks_uri = os.environ.get("RNV_AUTH_JWKS_URI")
     public_key = os.environ.get("RNV_AUTH_PUBLIC_KEY")
 
     if jwks_uri:
-        return JWTVerifier(jwks_uri=jwks_uri, issuer=issuer, audience=audience)
-    if public_key:
-        return JWTVerifier(public_key=public_key, issuer=issuer, audience=audience)
+        verifier = JWTVerifier(jwks_uri=jwks_uri, issuer=issuer, audience=audience)
+    elif public_key:
+        verifier = JWTVerifier(public_key=public_key, issuer=issuer, audience=audience)
+    else:
+        raise RuntimeError(
+            "RNV_AUTH is on but no key source is set. "
+            "Set RNV_AUTH_JWKS_URI (a provider) or RNV_AUTH_PUBLIC_KEY (a PEM key)."
+        )
 
-    raise RuntimeError(
-        "RNV_AUTH is on but no key source is set. "
-        "Set RNV_AUTH_JWKS_URI (a provider) or RNV_AUTH_PUBLIC_KEY (a PEM key)."
+    return RemoteAuthProvider(
+        token_verifier=verifier,
+        authorization_servers=[AnyHttpUrl(issuer)],
+        base_url=base_url,
     )
+
 
 mcp = FastMCP(
     name="rnv-color",
