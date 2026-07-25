@@ -1,0 +1,1 @@
+cd /tmp && rm -rf rnv-color-mcp && git clone https://github.com/RNVizion/rnv-color-mcp.git && cd rnv-color-mcp && echo "--- FILE TREE ---" && ls -R . | head -50 && echo "--- REQUIREMENTS ---" && cat requirements.txt 2>/dev/null && echo "--- SERVER HEAD ---" && head -60 server.py
