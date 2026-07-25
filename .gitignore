@@ -1,2 +1,3 @@
 *.sh
 .rebuild_marker
+dev_public_key.pem
