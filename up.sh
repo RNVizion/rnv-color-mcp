@@ -1,1 +1,4 @@
-cd /tmp && rm -rf rnv-color-mcp && git clone https://github.com/RNVizion/rnv-color-mcp.git && cd rnv-color-mcp && echo "--- FILE TREE ---" && ls -R . | head -50 && echo "--- REQUIREMENTS ---" && cat requirements.txt 2>/dev/null && echo "--- SERVER HEAD ---" && head -60 server.py
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:7860/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
