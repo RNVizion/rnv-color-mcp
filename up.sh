@@ -1,3 +1,7 @@
+pkill -f "python server.py"; sleep 1
+export RNV_AUTH=1
+export RNV_AUTH_PUBLIC_KEY="$(cat dev_public_key.pem)"
+python server.py
 # 1. The discovery route now exists — show me the resource field
 curl -s http://localhost:7860/.well-known/oauth-protected-resource
 
