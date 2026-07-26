@@ -130,7 +130,19 @@ class TestEnforcement:
             async with Client(url, auth=BearerAuth(read_token)) as c:
                 await c.call_tool(WRITE_TOOL, PALETTE)
         message = str(excinfo.value).lower()
+        # Component auth hides rather than 403s: an out-of-scope tool is filtered
+        # out of the caller's surface entirely, so the refusal surfaces as
+        # "Unknown tool" rather than "insufficient scope". That is the stronger
+        # outcome, and it is why "unknown tool" counts as an authorization refusal.
         assert any(
-            word in message
-            for word in ("scope", "auth", "permit", "denied", "forbidden", "not found")
+            phrase in message
+            for phrase in (
+                "unknown tool",
+                "not found",
+                "scope",
+                "auth",
+                "permit",
+                "denied",
+                "forbidden",
+            )
         ), f"refused, but not recognisably on authorization grounds: {excinfo.value}"
