@@ -1,0 +1,4 @@
+# Test-only. Not installed by the Docker Space; requirements.txt is the runtime set.
+pytest
+pytest-asyncio
+httpx
