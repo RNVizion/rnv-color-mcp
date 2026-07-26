@@ -7,17 +7,23 @@ refused on a tool its scopes do not cover.
 
 Driven over real HTTP against a real server, because the in-memory transport
 refuses auth outright (FastMCPTransport._set_auth raises "This transport does
-not support auth"). FastMCP's own run_server_async utility binds a free port and
-yields the URL, so the client speaks the actual protocol through the actual
-middleware stack.
+not support auth"). FastMCP's run_server_async binds a free port and yields the
+URL, so the client speaks the actual protocol through the actual middleware.
+
+Scoping is load-bearing here, not a style choice. server.mcp is a module-level
+singleton and carries an asyncio.Event that binds to whichever event loop starts
+it first, so only one server start per process is possible: a function-scoped
+fixture starts a second server on a second loop and dies on the stale Event.
+Hence one module-scoped server on one module-scoped loop.
 
 TestPositiveControl is the diagnostic. If it fails, the harness is wrong, not the
-server: it means tokens are not reaching the auth context at all and every other
-assertion here is passing or failing for the wrong reason. Read it first.
+server: tokens are not reaching the auth context and every other assertion here
+is passing or failing for the wrong reason. Read it first.
 """
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 from fastmcp import Client
 
 try:
@@ -32,10 +38,13 @@ except ImportError:  # pragma: no cover - import path fallback
 
 import server
 
-pytestmark = pytest.mark.skipif(
-    run_server_async is None,
-    reason="fastmcp.utilities.tests.run_server_async unavailable in this version",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        run_server_async is None,
+        reason="fastmcp.utilities.tests.run_server_async unavailable in this version",
+    ),
+    pytest.mark.asyncio(loop_scope="module"),
+]
 
 WRITE_TOOL = "save_palette"
 READ_TOOLS = {
@@ -52,21 +61,31 @@ READ_TOOLS = {
 PALETTE = {"name": "scope-test", "colors": ["#0a0a0f", "#d2bc93"]}
 
 
-@pytest.fixture
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def url():
-    """A real server on a real port. Auth is live; conftest set the env."""
+    """One real server, one port, one loop, for the whole module."""
     async with run_server_async(server.mcp) as running_url:
         yield running_url
 
 
-@pytest.fixture
-def read_token(make_token):
-    return make_token(scopes=["read"])
+@pytest.fixture(scope="module")
+def read_token(keypair):
+    return keypair.create_token(
+        subject="rnv-test-read",
+        issuer="https://rnvizion.dev",
+        audience="https://rnvizion-rnv-color-mcp.hf.space/mcp",
+        scopes=["read"],
+    )
 
 
-@pytest.fixture
-def write_token(make_token):
-    return make_token(scopes=["read", "write"])
+@pytest.fixture(scope="module")
+def write_token(keypair):
+    return keypair.create_token(
+        subject="rnv-test-write",
+        issuer="https://rnvizion.dev",
+        audience="https://rnvizion-rnv-color-mcp.hf.space/mcp",
+        scopes=["read", "write"],
+    )
 
 
 class TestPositiveControl:
