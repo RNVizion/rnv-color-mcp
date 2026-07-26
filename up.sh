@@ -35,3 +35,6 @@ print("patched")
 PYEOF
 
 python -m pytest
+
+git add tests/test_scopes.py && git commit -m "test: out-of-scope tools are hidden, not 403'd" && git push
+
