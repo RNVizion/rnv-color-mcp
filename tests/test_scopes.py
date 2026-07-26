@@ -5,14 +5,15 @@ The twelve tests in test_auth.py prove the server refuses a token it cannot
 verify. These prove the harder thing: that a token it *does* verify is still
 refused on a tool its scopes do not cover.
 
-Driven through the in-memory Client, which is where component-level auth checks
-run: transport-level rejection (no token, bad token) is test_auth.py's job, and
-this file is about differentiating between two authenticated callers.
+Driven over real HTTP against a real server, because the in-memory transport
+refuses auth outright (FastMCPTransport._set_auth raises "This transport does
+not support auth"). FastMCP's own run_server_async utility binds a free port and
+yields the URL, so the client speaks the actual protocol through the actual
+middleware stack.
 
-test_read_token_can_still_read is the positive control. If it fails, the harness
-is wrong, not the server: it means the token is not reaching the auth context at
-all, and every other assertion here is passing or failing for the wrong reason.
-Read that one first.
+TestPositiveControl is the diagnostic. If it fails, the harness is wrong, not the
+server: it means tokens are not reaching the auth context at all and every other
+assertion here is passing or failing for the wrong reason. Read it first.
 """
 from __future__ import annotations
 
@@ -20,11 +21,21 @@ import pytest
 from fastmcp import Client
 
 try:
+    from fastmcp.utilities.tests import run_server_async
+except ImportError:  # pragma: no cover
+    run_server_async = None
+
+try:
     from fastmcp.client.auth import BearerAuth
 except ImportError:  # pragma: no cover - import path fallback
     from fastmcp.client.auth.bearer import BearerAuth
 
 import server
+
+pytestmark = pytest.mark.skipif(
+    run_server_async is None,
+    reason="fastmcp.utilities.tests.run_server_async unavailable in this version",
+)
 
 WRITE_TOOL = "save_palette"
 READ_TOOLS = {
@@ -38,51 +49,55 @@ READ_TOOLS = {
     "get_palette",
 }
 
-PALETTE = {
-    "name": "scope-test",
-    "colors": ["#0a0a0f", "#d2bc93"],
-}
+PALETTE = {"name": "scope-test", "colors": ["#0a0a0f", "#d2bc93"]}
 
 
 @pytest.fixture
-def read_client(make_token):
-    return Client(server.mcp, auth=BearerAuth(make_token(scopes=["read"])))
+async def url():
+    """A real server on a real port. Auth is live; conftest set the env."""
+    async with run_server_async(server.mcp) as running_url:
+        yield running_url
 
 
 @pytest.fixture
-def write_client(make_token):
-    return Client(server.mcp, auth=BearerAuth(make_token(scopes=["read", "write"])))
+def read_token(make_token):
+    return make_token(scopes=["read"])
+
+
+@pytest.fixture
+def write_token(make_token):
+    return make_token(scopes=["read", "write"])
 
 
 class TestPositiveControl:
-    """If this class fails, stop: the token is not reaching the auth context."""
+    """If this class fails, stop: tokens are not reaching the auth context."""
 
-    async def test_read_token_can_still_read(self, read_client):
-        async with read_client as c:
+    async def test_read_token_can_still_read(self, url, read_token):
+        async with Client(url, auth=BearerAuth(read_token)) as c:
             result = await c.call_tool("convert_color", {"color": "#d2bc93"})
         assert result is not None
 
-    async def test_write_token_can_write(self, write_client):
-        async with write_client as c:
+    async def test_write_token_can_write(self, url, write_token):
+        async with Client(url, auth=BearerAuth(write_token)) as c:
             result = await c.call_tool(WRITE_TOOL, PALETTE)
         assert result is not None
 
 
 class TestVisibility:
-    """Component auth filters the tool list, not just the call."""
+    """Component auth filters the tool list, not only the call."""
 
-    async def test_read_token_does_not_see_the_write_tool(self, read_client):
-        async with read_client as c:
+    async def test_read_token_does_not_see_the_write_tool(self, url, read_token):
+        async with Client(url, auth=BearerAuth(read_token)) as c:
             names = {t.name for t in await c.list_tools()}
         assert WRITE_TOOL not in names
 
-    async def test_read_token_sees_every_read_tool(self, read_client):
-        async with read_client as c:
+    async def test_read_token_sees_every_read_tool(self, url, read_token):
+        async with Client(url, auth=BearerAuth(read_token)) as c:
             names = {t.name for t in await c.list_tools()}
         assert READ_TOOLS <= names
 
-    async def test_write_token_sees_all_nine(self, write_client):
-        async with write_client as c:
+    async def test_write_token_sees_all_nine(self, url, write_token):
+        async with Client(url, auth=BearerAuth(write_token)) as c:
             names = {t.name for t in await c.list_tools()}
         assert len(names) == 9
         assert WRITE_TOOL in names
@@ -91,11 +106,10 @@ class TestVisibility:
 class TestEnforcement:
     """The one that matters: a verified token, refused on scope."""
 
-    async def test_read_token_is_refused_on_the_write_tool(self, read_client):
+    async def test_read_token_is_refused_on_the_write_tool(self, url, read_token):
         with pytest.raises(Exception) as excinfo:
-            async with read_client as c:
+            async with Client(url, auth=BearerAuth(read_token)) as c:
                 await c.call_tool(WRITE_TOOL, PALETTE)
-        # the refusal must be about authorization, not a coincidental failure
         message = str(excinfo.value).lower()
         assert any(
             word in message
