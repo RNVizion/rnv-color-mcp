@@ -2,3 +2,8 @@
 .rebuild_marker
 dev_public_key.pemgen_test_key.py
 server.log
+
+dev_public_key.pem
+server.log
+__pycache__/
+*.pyc
