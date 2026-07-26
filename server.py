@@ -24,18 +24,22 @@ from starlette.responses import JSONResponse
 
 import api
 
-# ---- auth (Stage 3: token verification + OAuth discovery, opt-in) -------------
+# ---- auth (opt-in: token verification, OAuth discovery, per-tool scopes) ------
 # Off by default (RNV_AUTH unset -> returns None -> server unchanged). When on,
 # this validates bearer tokens AND serves RFC 9728 protected-resource metadata at
-# /.well-known/oauth-protected-resource, plus a spec-compliant WWW-Authenticate
+# /.well-known/oauth-protected-resource/mcp, plus a spec-compliant WWW-Authenticate
 # challenge on 401. Moving to a real provider (Auth0, etc.) later is config here,
 # not code: set RNV_AUTH_JWKS_URI + RNV_AUTH_ISSUER + RNV_AUTH_AUDIENCE.
+#
+# Two scopes: `read` for the eight read-only tools, `write` for save_palette, the
+# only tool that mutates the store.
+RNV_SCOPES = ["read", "write"]
+
+
 def _build_auth():
     raw = os.environ.get("RNV_AUTH", "")
     if raw.lower() not in ("1", "true", "yes", "on"):
         return None
-   
-
 
     from fastmcp.server.auth import RemoteAuthProvider
     from fastmcp.server.auth.providers.jwt import JWTVerifier
@@ -65,7 +69,28 @@ def _build_auth():
         token_verifier=verifier,
         authorization_servers=[AnyHttpUrl(issuer)],
         base_url=base_url,
+        scopes_supported=RNV_SCOPES,
     )
+
+
+_AUTH = _build_auth()
+
+
+def _scoped(*scopes) -> dict:
+    """
+    Per-tool scope requirement, attached only when auth is enabled.
+
+    Returns a kwargs dict rather than a value so that with auth off nothing is
+    passed to mcp.tool() at all: the auth-off path stays identical to the
+    pre-auth server, with no dependence on how the framework treats a null
+    component-level auth.
+    """
+    if _AUTH is None:
+        return {}
+
+    from fastmcp.server.auth import require_scopes
+
+    return {"auth": require_scopes(*scopes)}
 
 
 mcp = FastMCP(
@@ -76,13 +101,17 @@ mcp = FastMCP(
         "palettes. Color inputs accept hex, CSS names, RNV brand names (brand gold, "
         "near-black), or saved-palette references."
     ),
-    auth=_build_auth(),
+    auth=_AUTH,
 )
 
 
 # ---- glama ownership claim ----------------------------------------------
 # Served at https://rnvizion-rnv-color-mcp.hf.space/.well-known/glama.json so Glama can
 # verify ownership of this connector. The email must match the Glama account email.
+#
+# NOTE: custom routes are never covered by the auth middleware, by design. That is
+# correct here (public read-only metadata) and is exactly why no write or secret may
+# ever be served from a custom route: tool-level scopes are what protect writes.
 @mcp.custom_route("/.well-known/glama.json", methods=["GET"])
 async def glama_claim(request):
     return JSONResponse(
@@ -96,6 +125,7 @@ async def glama_claim(request):
 # ---- color engine -------------------------------------------------------
 mcp.tool(
     api.mix_colors,
+    **_scoped("read"),
     description=(
         "Blend up to 12 colors into one. Each color may be a hex (#d2bc93), a CSS name "
         "(red), an RNV brand name (brand gold, near-black), or a saved-palette reference "
@@ -115,6 +145,7 @@ mcp.tool(
 
 mcp.tool(
     api.convert_color,
+    **_scoped("read"),
     description=(
         "Convert a color between formats. Input accepts a hex, CSS name, RNV brand name, "
         "or saved-palette reference. With `to` set to one of hex/rgb/hsv/hsl/lab, returns "
@@ -127,6 +158,7 @@ mcp.tool(
 
 mcp.tool(
     api.generate_harmony,
+    **_scoped("read"),
     description=(
         "Generate a color harmony from a base color. base accepts a hex, CSS name, RNV "
         "brand name, or saved-palette reference (e.g. 'Spring line:2'). scheme is one of: "
@@ -141,6 +173,7 @@ mcp.tool(
 
 mcp.tool(
     api.color_difference,
+    **_scoped("read"),
     description=(
         "Perceptual difference (Delta-E) between two colors. color1 and color2 accept a hex, "
         "CSS name, RNV brand name, or saved-palette reference. method is 'ciede2000' (default, "
@@ -154,6 +187,7 @@ mcp.tool(
 
 mcp.tool(
     api.contrast_check,
+    **_scoped("read"),
     description=(
         "WCAG contrast ratio between a foreground and background color, for accessibility. "
         "Both accept a hex, CSS name, RNV brand name, or saved-palette reference. Returns the "
@@ -168,6 +202,7 @@ mcp.tool(
 # ---- text ---------------------------------------------------------------
 mcp.tool(
     api.transform_text,
+    **_scoped("read"),
     description=(
         "Apply an exact, deterministic text transformation. operation is one of: "
         "UPPERCASE, lowercase, 'Title Case', 'Sentence case', camelCase, PascalCase, "
@@ -182,6 +217,7 @@ mcp.tool(
 # ---- palette memory -----------------------------------------------------
 mcp.tool(
     api.save_palette,
+    **_scoped("write"),
     description=(
         "Persist a named color palette for later retrieval with get_palette or list_palettes. "
         "colors is a list of hex values; optional notes are stored as the palette's description. "
@@ -201,6 +237,7 @@ mcp.tool(
 
 mcp.tool(
     api.list_palettes,
+    **_scoped("read"),
     description=(
         "List every saved palette as name + colors. "
         "Read-only; no side effects. "
@@ -212,6 +249,7 @@ mcp.tool(
 
 mcp.tool(
     api.get_palette,
+    **_scoped("read"),
     description=(
         "Retrieve one saved palette by name, returning its colors and metadata. Returns "
         "null if no palette by that name exists. "
