@@ -1,3 +1,5 @@
+pip install -r requirements-dev.txt && python -m pytest
+
 python - << 'PYEOF'
 import pathlib
 p = pathlib.Path("tests/test_scopes.py")
