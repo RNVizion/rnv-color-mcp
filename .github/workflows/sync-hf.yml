@@ -4,6 +4,12 @@ name: Sync to Hugging Face Space
 # server is never stale relative to GitHub. GitHub is the source of truth; the
 # Space is a mirror.
 #
+# Gated on tests since 2026-07-26: the sync job will not run unless the suite
+# passes, so a broken commit cannot reach the live server. The tests run here as
+# well as in tests.yml on purpose — tests.yml covers pull requests and provides
+# the status check, this one guards the deployment. Duplicated seconds are worth
+# a gate that cannot be bypassed by a workflow-ordering accident.
+#
 # Requires the GitHub Actions secret HF_SYNC_TOKEN: a Hugging Face WRITE token
 # (the hf_... value) scoped to the RNVizion/rnv-color-mcp Space.
 
@@ -13,7 +19,27 @@ on:
   workflow_dispatch:        # allow manual runs from the Actions tab
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   # shallow is fine; nothing here pushes
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest
+
   sync-to-hub:
+    needs: test               # the gate: no green suite, no deploy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout full history
