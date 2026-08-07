@@ -119,6 +119,34 @@ python tests/server_test.py       # smoke: exercises all 9 tools in-process
 
 Set `HF_TOKEN` to write palettes through to a private Hugging Face Dataset for durable storage.
 
+## Running a copy?
+
+The code is MIT-licensed; you're free to rebuild, host, and modify it, and I'd rather you did than
+didn't. What a licence can't carry is the environment.
+
+Some capabilities depend on how a deployment is configured, not on the code alone:
+
+- **Palette persistence** needs `HF_TOKEN` and a writable Dataset. Without it, saves land in
+  process memory and vanish with the container.
+- **Scoped authorization** needs `RNV_AUTH` and a configured issuer. Unset, the server runs open —
+  which is correct for a public demo and wrong for anything else.
+- **Anything that fetches** needs outbound network access.
+
+A rebuild missing one of those usually doesn't fail loudly; it **returns success and drops the
+result.** That is worse than an outage, because an outage tells you.
+
+So: if you're running a copy and something behaves oddly, check the environment before you check
+the code, and check against the canonical deployment before you file anything.
+
+**Canonical endpoint:** `https://rnvizion-rnv-color-mcp.hf.space/mcp`
+**Canonical source:** `https://github.com/RNVizion/rnv-color-mcp`
+
+A copy served from another URL may be older, modified, or differently configured. That's fine and
+allowed; it just isn't this.
+
+The tools resolve or refuse; they don't guess. A copy can only keep that promise if the ground
+under it was checked first.
+
 ## Notes
 
 - **One brand source of truth.** Brand colors live in [`engine/brand.py`](engine/brand.py); the
