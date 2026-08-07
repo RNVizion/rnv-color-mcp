@@ -85,10 +85,11 @@ eight read-only tools, `write` covers `save_palette`, the only tool that mutates
 without the `write` scope does not see `save_palette` in its tool list at all; out-of-scope tools
 are hidden rather than refused, so nothing leaks about what exists behind a scope you lack.
 
-Enforcement is covered by the test suite: 18 tests, run in CI on every push, spanning the
-token-validation matrix (missing, malformed, wrong issuer, wrong audience, expired, valid) and
-end-to-end scope enforcement over real HTTP. The suite mints its own keys and requires no
-credentials. The tests cover the auth layer; the color engine itself is not under automated test.
+Enforcement is covered by the test suite, run in CI on every push (status badge at the top of
+this file), spanning the token-validation matrix (missing, malformed, wrong issuer, wrong
+audience, expired, valid) and end-to-end scope enforcement over real HTTP. The suite mints its
+own keys and requires no credentials. The tests cover the auth layer; the color engine itself is
+not under automated test.
 
 Moving from the self-issued development key to a real identity provider is configuration, not
 code: point `RNV_AUTH_JWKS_URI` at the provider's JWKS endpoint and set the issuer and audience
@@ -113,7 +114,7 @@ pip install -r requirements.txt
 python server.py                  # Streamable HTTP on $PORT (default 7860)
 
 pip install -r requirements-dev.txt
-python -m pytest                  # 18 auth + scope tests
+python -m pytest                  # auth + scope tests
 python tests/server_test.py       # smoke: exercises all 9 tools in-process
 ```
 
