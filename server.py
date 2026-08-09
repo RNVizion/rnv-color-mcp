@@ -107,11 +107,11 @@ mcp = FastMCP(
 
 # ---- glama ownership claim ----------------------------------------------
 # Served at https://rnvizion-rnv-color-mcp.hf.space/.well-known/glama.json so Glama can
-# verify ownership of this connector. The email must match the Glama account email.
-#
-# NOTE: custom routes are never covered by the auth middleware, by design. That is
-# correct here (public read-only metadata) and is exactly why no write or secret may
-# ever be served from a custom route: tool-level scopes are what protect writes.
+# verify ownership of this connector. The email must match the Glama account email, so
+# changing it is a coordinated change, not a commit. 
+
+# Note this is NOT glama.json at the repo root: that file uses the server.json schema and names a GitHub username, while
+# this route uses connector.json and names an email. Same filename, different artifact.
 @mcp.custom_route("/.well-known/glama.json", methods=["GET"])
 async def glama_claim(request):
     return JSONResponse(
