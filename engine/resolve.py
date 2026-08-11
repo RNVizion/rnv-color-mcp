@@ -9,6 +9,8 @@ Resolution order (most specific wins):
     1. Hex literal            "#d2bc93", "d2bc93", "#fff"   -> normalized hex
     2. Saved palette swatch   "Spring line", "Spring line:2" -> a color from the store
     3. RNV brand name         "brand gold", "near-black"     -> your chosen hex
+                              ("near-black" is charcoal #1a1a1a; the web ground
+                               #0a0a0f answers to "web black")
     4. CSS / X11 name         "red", "rebeccapurple"         -> standard hex
     5. Unknown                -> UnknownColor (refuse; never guess)
 
@@ -19,9 +21,14 @@ from __future__ import annotations
 
 import re
 
-from engine.brand import RNV_BRAND
+from engine.brand_vocab import RNV_BRAND
 
-# RNV brand vocabulary now lives in engine/brand.py (single source of truth).
+# RNV brand vocabulary is mirrored in engine/brand_vocab.py. That file is NOT the
+# source; the source is engine/brand.py in RNVizion/rnv-brand, and this mirror is
+# corrected when drift is detected against it. It is carried locally on purpose:
+# resolve_color is the hot path, and a fetch here would have to answer what happens
+# when it fails -- fail closed and the server refuses every color, fall back and the
+# local copy is needed anyway, guess and the rule below is already broken.
 
 # --- universal CSS / X11 named colors (baked from matplotlib CSS4; no runtime dep) ---
 CSS_NAMES: dict[str, str] = {
