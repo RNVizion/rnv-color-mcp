@@ -150,8 +150,14 @@ under it was checked first.
 
 ## Notes
 
-- **One brand source of truth.** Brand colors live in [`engine/brand.py`](engine/brand.py); the
-  resolver imports them, so a brand value is defined in exactly one place. See `BRAND_COLORS.md`.
+- **Brand colors are mirrored, not owned.** The vocabulary lives in
+  [`engine/brand_vocab.py`](engine/brand_vocab.py), mirrored from `engine/brand.py` in
+  [RNVizion/rnv-brand](https://github.com/RNVizion/rnv-brand) and corrected when drift is
+  detected against it. It is carried locally on purpose: `resolve_color` is the hot path, and a
+  fetch there would have to answer what happens when it fails — fail closed and the server
+  refuses every color, fall back and the local copy is needed anyway, guess and the promise
+  above is already broken. Identifiers are local by design; the check compares values, never
+  names. The register and its reasoning live in `BRAND_COLORS.md`, in `rnv-brand`.
 - **Engine is dependency-free.** The color math, harmony, and text logic are pure standard
   library, lifted Qt-free from the desktop apps. Only the server layer needs `fastmcp`.
 - **Honest by design.** An unknown color name is refused, not guessed. An unverifiable token is
