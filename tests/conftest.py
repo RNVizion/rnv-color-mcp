@@ -2,8 +2,15 @@
 Test harness for rnv-color-mcp auth.
 
 server.py builds its auth provider at import time from environment variables,
-so the environment must be set BEFORE server is imported. pytest loads a
-root conftest.py first, which makes this the correct place for it.
+so the environment must be set BEFORE server is imported. A conftest.py is
+loaded before the modules beside it are imported, which is what makes this
+work.
+
+This file used to sit at the repository root and say that a ROOT conftest.py
+was therefore the correct place for it. The ordering claim was true; the
+placement conclusion did not follow. Measured from tests/: 32 passed. It lives
+with the tests it serves. If a test is ever added outside tests/, this has to
+move back up -- that is the condition, not the directory.
 
 The keypair is generated per run and never written to disk: tests mint their
 own tokens and the server verifies against the matching public key.

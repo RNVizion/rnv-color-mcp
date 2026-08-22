@@ -113,7 +113,7 @@ unprotected.
 pip install -r requirements.txt
 python server.py                  # Streamable HTTP on $PORT (default 7860)
 
-pip install -r requirements-dev.txt
+pip install -r tests/requirements-dev.txt
 python -m pytest                  # auth + scope tests
 python tests/server_test.py       # smoke: exercises all 9 tools in-process
 ```
