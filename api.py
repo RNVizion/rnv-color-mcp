@@ -115,6 +115,24 @@ def color_difference(color1: str, color2: str, method: str = "ciede2000") -> dic
     }
 
 
+
+def _truncate(value: float, places: int) -> str:
+    """Format to `places` decimals by TRUNCATING, never rounding.
+
+    Rounding can only be wrong in one direction that matters: a true 4.4996
+    rounds to 4.500 and reads as a pass it has not earned. Truncation cannot
+    overstate. It cannot understate across a bar either -- a true 4.5000001
+    truncates to 4.500, which still reads as passing -- so it satisfies both
+    gates: refuse when you must, and do not refuse when you could have answered.
+
+    More precision alone does not fix this. It moves the trap to a finer scale;
+    only truncation removes it.
+    """
+    scale = 10 ** places
+    # int() truncates toward zero, and a contrast ratio is always >= 1.
+    return f"{int(value * scale) / scale:.{places}f}"
+
+
 def contrast_check(foreground: str, background: str) -> dict[str, Any]:
     """WCAG contrast ratio between a foreground and background color, with pass/fail
     for each accessibility level. Ratio runs 1.0 (none) to 21.0 (black on white)."""
@@ -122,8 +140,12 @@ def contrast_check(foreground: str, background: str) -> dict[str, Any]:
     bg = ColorMath.hex_to_rgb(resolve_color(background, _store))
     ratio = ColorMath.contrast_ratio(fg, bg)
     return {
-        "ratio": round(ratio, 2),
-        "display": f"{round(ratio, 2)}:1",
+        # UNROUNDED. A consumer compares this against a threshold and is
+        # entitled to the real number: round(2.997638, 2) is 3.0, and
+        # `if ratio >= 3.0` then passes a pair that fails. The wcag flags
+        # below always compared the unrounded value and were never wrong.
+        "ratio": ratio,
+        "display": f"{_truncate(ratio, 3)}:1",
         "foreground": ColorMath.rgb_to_hex(fg),
         "background": ColorMath.rgb_to_hex(bg),
         "wcag": {

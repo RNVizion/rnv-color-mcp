@@ -16,11 +16,21 @@ is no cross-repo import path, and adding one would put a build-time network
 dependency under a value that changes twice a year.
 
 Sync discipline: values here are corrected when drift is detected against
-rnv-brand, by a human, in a deliberate commit. Identifiers are local by design
-— BRAND_GOLD here, GOLD upstream — because the check compares values, never
-names. Nothing propagates automatically, and nothing should appear to.
+rnv-brand, by a human, in a deliberate commit. Nothing propagates
+automatically, and nothing should appear to.
 
-Mirrored from rnv-brand@c4d479dbf16b95b21fea80016372a03a64f1c450, 2026-08-10.
+Identifiers used to be local by design — BRAND_GOLD here, GOLD upstream —
+on the grounds that the check compares values and never names. The register
+retired that rule on 2026-08-17: it permitted four spellings of one colour
+across six repos, and a system that cannot hold one identifier across its
+own repositories is not positioned to align anyone else's. The names now
+match upstream. The check still compares values.
+
+Mirrored from rnv-brand@60bd56d1bf5cec15942332a1c8db543134f5ad4f, 2026-08-22.
+Previously rnv-brand@c4d479dbf16b, 2026-08-10, which carried the
+gold retired on 2026-08-17. A mirror whose contents moved and whose
+SHA did not is worse than one that is plainly stale: the SHA asserts
+it is current.
 
 Consumed by: engine/resolve.py, which imports RNV_BRAND and nothing else.
 
@@ -44,7 +54,7 @@ from typing import Final
 BRAND_GOLD: Final[str] = "#d2bc93"
 """Primary brand gold. The accent on black and dark surfaces."""
 
-BRAND_GOLD_DARK: Final[str] = "#b19145"
+BRAND_DARK_GOLD: Final[str] = "#8c7337"
 """Dark gold. The accent on light surfaces; also gold's shade on dark."""
 
 BRAND_BLACK: Final[str] = "#1a1a1a"
@@ -73,9 +83,9 @@ RNV_BRAND: Final[dict[str, str]] = {
     "gold": BRAND_GOLD,
     "brand gold": BRAND_GOLD,
     "rnv gold": BRAND_GOLD,
-    "dark gold": BRAND_GOLD_DARK,
-    "gold dark": BRAND_GOLD_DARK,
-    "light-mode gold": BRAND_GOLD_DARK,
+    "dark gold": BRAND_DARK_GOLD,
+    "gold dark": BRAND_DARK_GOLD,
+    "light-mode gold": BRAND_DARK_GOLD,
     "black": TRUE_BLACK,
     "true black": TRUE_BLACK,
     "white": WHITE,
@@ -85,7 +95,7 @@ RNV_BRAND: Final[dict[str, str]] = {
 
 __all__ = [
     "BRAND_GOLD",
-    "BRAND_GOLD_DARK",
+    "BRAND_DARK_GOLD",
     "BRAND_BLACK",
     "TRUE_BLACK",
     "WHITE",
