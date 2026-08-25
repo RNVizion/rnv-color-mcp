@@ -26,11 +26,24 @@ across six repos, and a system that cannot hold one identifier across its
 own repositories is not positioned to align anyone else's. The names now
 match upstream. The check still compares values.
 
-Mirrored from rnv-brand@60bd56d1bf5cec15942332a1c8db543134f5ad4f, 2026-08-22.
-Previously rnv-brand@c4d479dbf16b, 2026-08-10, which carried the
-gold retired on 2026-08-17. A mirror whose contents moved and whose
-SHA did not is worse than one that is plainly stale: the SHA asserts
-it is current.
+Mirrored from rnv-brand@361c0e2a4b0ecb9109f358b5714ce8a630b75d69, 2026-08-24.
+Previously rnv-brand@60bd56d1bf5c, 2026-08-22, and before that
+rnv-brand@c4d479dbf16b, 2026-08-10, which carried the gold retired on
+2026-08-17. A mirror whose contents moved and whose SHA did not is worse
+than one that is plainly stale: the SHA asserts it is current.
+
+Nothing this file carries moved between those two pins. The six constants
+and every RNV_BRAND key and value diff clean against both; the re-pin buys
+truth in labelling, not a corrected value.
+
+WHAT UPSTREAM GAINED AFTER 60bd56d1 AND THIS FILE DELIBERATELY DOES NOT
+CARRY: BRAND_STILL_GOLD (#9b907a, the seventh permanent, registered) and
+BRAND_STANDBY_GOLD (#ae986f, derived). Neither is in upstream's RNV_BRAND,
+so upstream's own resolver refuses "still gold" exactly as this one does.
+The mirror is faithful, not lagging. If a future sync adds either constant
+without adding the key, the resolver's behaviour is unchanged and this note
+is the record of why; if upstream adds the KEY, the wire-format guard in
+tests/test_brand_mirror.py fails until WIRE_KEYS is updated on purpose.
 
 Consumed by: engine/resolve.py, which imports RNV_BRAND and nothing else.
 
