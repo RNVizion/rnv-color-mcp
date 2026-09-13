@@ -26,8 +26,8 @@ across six repos, and a system that cannot hold one identifier across its
 own repositories is not positioned to align anyone else's. The names now
 match upstream. The check still compares values.
 
-Mirrored from rnv-brand@0d96ff889c9f59286326207d40493207b419128d, 2026-09-12.
-Previously rnv-brand@361c0e2a4b0e, 2026-08-24; @60bd56d1bf5c, 2026-08-22;
+Mirrored from rnv-brand@a46a9eac6dd48b1fc13257be7a1121610d7dad6d, 2026-09-13.
+Previously rnv-brand@0d96ff889c9f, 2026-09-12; @361c0e2a4b0e, 2026-08-24; @60bd56d1bf5c, 2026-08-22;
 and @c4d479dbf16b, 2026-08-10, which carried the gold retired on 2026-08-17.
 A mirror whose contents moved and whose SHA did not is worse than one that
 is plainly stale: the SHA asserts it is current.
@@ -115,6 +115,16 @@ BRAND_BLUE: Final[str] = "#6f94bc"
 """Dark-surface blue. The eighth permanent, and the register's second hue;
 registered upstream 2026-09-12."""
 
+BRAND_WEB_CODE: Final[str] = "#00b0a0"
+"""Inline code on the web. The tenth PERMANENT registration and, upstream's
+own words, NOT a promotion to a third brand hue -- permanent names the colour,
+web names the role, and the emitted token is --rnv-code. Promotion would need
+a _LIGHT partner that has not been derived.
+
+Registered upstream 2026-09-12, mirrored 2026-09-13. Upstream states it was
+mixed in two paint stages: BRAND_BLUE + #00ffa3 at 6:5, then that + BRAND_GOLD
+at 8:6. Both stages reproduce byte-identical through this server."""
+
 BRAND_DARK_BLUE: Final[str] = "#456c91"
 """Light-surface blue -- darker BECAUSE the ground is lighter, exactly as
 BRAND_DARK_GOLD is. The ninth permanent; registered upstream 2026-09-12."""
@@ -152,6 +162,13 @@ RNV_BRAND: Final[dict[str, str]] = {
     "dark blue": BRAND_DARK_BLUE,
     "blue dark": BRAND_DARK_BLUE,
     "light-mode blue": BRAND_DARK_BLUE,
+    # Inline-code teal, upstream 2026-09-12, mirrored 2026-09-13. Caught by
+    # scripts/check_brand_currency.py the day after that check landed -- its
+    # first live find, against eighteen days for the gap before it.
+    "code": BRAND_WEB_CODE,
+    "code teal": BRAND_WEB_CODE,
+    "web code": BRAND_WEB_CODE,
+    "web-code": BRAND_WEB_CODE,
     "black": TRUE_BLACK,
     "true black": TRUE_BLACK,
     "white": WHITE,
@@ -170,5 +187,6 @@ __all__ = [
     "BRAND_STANDBY_GOLD",
     "BRAND_BLUE",
     "BRAND_DARK_BLUE",
+    "BRAND_WEB_CODE",
     "RNV_BRAND",
 ]
