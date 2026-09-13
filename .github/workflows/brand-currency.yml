@@ -1,0 +1,57 @@
+# Is the brand-vocabulary mirror still current with rnv-brand?
+#
+# THIS WORKFLOW GATES NOTHING, ON PURPOSE. It is not a required check, nothing
+# carries `needs:` on it, and sync-hf.yml never waits for it. Upstream adding a
+# colour is not a defect of this repository -- the mirror is synced by a human
+# in a deliberate commit, by design -- so failing a push over it would stop good
+# work for something that work did not do, and the first person to hit that at
+# eleven at night would route around it. Gate a defect, warn about a queue.
+#
+# It fails loudly anyway, because this job's status is the warning. Nothing
+# waits on it, so red here blocks nobody and cannot be routed around: there is
+# nothing to route.
+#
+# WHY SCHEDULED AND NOT ON PUSH. The gap this exists for opened 2026-08-25 and
+# was found from outside on 2026-09-12. This repository's last push was nine
+# hours BEFORE the gap opened and there were none after, so a push-triggered
+# check of any design would have fired zero times in the entire window. The
+# clock is the trigger, because the other repository's clock is what moves.
+#
+# The transcription half of the same script runs in tests.yml, where it DOES
+# gate, because a mirror that does not match its own pinned commit is this
+# repository being wrong.
+
+name: brand vocabulary currency
+
+on:
+  schedule:
+    # 13:00 UTC daily. Deliberately not midnight: a failure should land while
+    # there is a day left to act on it.
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "engine/brand_vocab.py"
+      - "scripts/check_brand_currency.py"
+      - ".github/workflows/brand-currency.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  currency:
+    name: mirror vs rnv-brand@main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # No dependencies: the script is stdlib only and parses upstream with
+      # ast rather than importing it. A guard that executes the code it is
+      # guarding is not a guard, and this one reads a remote file.
+      - name: Compare key sets against upstream HEAD
+        run: python scripts/check_brand_currency.py --mode currency
