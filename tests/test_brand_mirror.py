@@ -18,7 +18,7 @@ import re
 from engine import brand_vocab as V
 
 RETIRED_GOLD = "#b" "19145"
-SYNCED_SHA = "0d96ff889c9f59286326207d40493207b419128d"
+SYNCED_SHA = "a46a9eac6dd48b1fc13257be7a1121610d7dad6d"
 
 # The resolver vocabulary IS the wire format. A client sends these strings.
 WIRE_KEYS = {
@@ -29,6 +29,7 @@ WIRE_KEYS = {
     "standby gold", "standby-gold",
     "blue", "brand blue", "rnv blue",
     "dark blue", "blue dark", "light-mode blue",
+    "code", "code teal", "web code", "web-code",
     "black", "true black", "white", "brand white", "web black",
 }
 
@@ -98,6 +99,7 @@ def test_the_registered_additions_resolve():
     assert V.BRAND_STANDBY_GOLD == "#ae986f"
     assert V.BRAND_BLUE == "#6f94bc"
     assert V.BRAND_DARK_BLUE == "#456c91"
+    assert V.BRAND_WEB_CODE == "#00b0a0"
     for alias in ("still gold", "still-gold", "stillness"):
         assert V.RNV_BRAND[alias] == V.BRAND_STILL_GOLD, alias
     for alias in ("standby gold", "standby-gold"):
@@ -106,6 +108,8 @@ def test_the_registered_additions_resolve():
         assert V.RNV_BRAND[alias] == V.BRAND_BLUE, alias
     for alias in ("dark blue", "blue dark", "light-mode blue"):
         assert V.RNV_BRAND[alias] == V.BRAND_DARK_BLUE, alias
+    for alias in ("code", "code teal", "web code", "web-code"):
+        assert V.RNV_BRAND[alias] == V.BRAND_WEB_CODE, alias
 
 
 def test_standby_is_not_described_by_the_retired_meaning():
