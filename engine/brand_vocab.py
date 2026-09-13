@@ -116,10 +116,19 @@ BRAND_BLUE: Final[str] = "#6f94bc"
 registered upstream 2026-09-12."""
 
 BRAND_WEB_CODE: Final[str] = "#00b0a0"
-"""Inline code on the web. The tenth PERMANENT registration and, upstream's
-own words, NOT a promotion to a third brand hue -- permanent names the colour,
-web names the role, and the emitted token is --rnv-code. Promotion would need
-a _LIGHT partner that has not been derived.
+"""A brand colour, permanently registered; the tenth. Its first role is inline
+code on the web, emitted as --rnv-code, but a role is where a colour starts
+rather than where it is confined: brand colours are the base set the brand
+reuses, derives from, and builds ramps out of. Expect it anywhere the register
+is consumed, the fashion app included.
+
+What upstream means by "not a third brand hue" is narrower than membership and
+should not be read as "not a brand colour": gold and blue each carry a
+light-surface partner (BRAND_DARK_GOLD, BRAND_DARK_BLUE) so they work on either
+ground, and no single teal clears 4.5 on both #1a1a1a and #f5f5f5 -- the
+ceiling for any value on both is 3.9954 -- so that partner has not been
+derived. A completeness question about the hue, not a membership question
+about the colour.
 
 Registered upstream 2026-09-12, mirrored 2026-09-13. Upstream states it was
 mixed in two paint stages: BRAND_BLUE + #00ffa3 at 6:5, then that + BRAND_GOLD
