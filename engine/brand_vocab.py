@@ -26,24 +26,34 @@ across six repos, and a system that cannot hold one identifier across its
 own repositories is not positioned to align anyone else's. The names now
 match upstream. The check still compares values.
 
-Mirrored from rnv-brand@361c0e2a4b0ecb9109f358b5714ce8a630b75d69, 2026-08-24.
-Previously rnv-brand@60bd56d1bf5c, 2026-08-22, and before that
-rnv-brand@c4d479dbf16b, 2026-08-10, which carried the gold retired on
-2026-08-17. A mirror whose contents moved and whose SHA did not is worse
-than one that is plainly stale: the SHA asserts it is current.
+Mirrored from rnv-brand@0d96ff889c9f59286326207d40493207b419128d, 2026-09-12.
+Previously rnv-brand@361c0e2a4b0e, 2026-08-24; @60bd56d1bf5c, 2026-08-22;
+and @c4d479dbf16b, 2026-08-10, which carried the gold retired on 2026-08-17.
+A mirror whose contents moved and whose SHA did not is worse than one that
+is plainly stale: the SHA asserts it is current.
 
-Nothing this file carries moved between those two pins. The six constants
-and every RNV_BRAND key and value diff clean against both; the re-pin buys
-truth in labelling, not a corrected value.
+THE PREVIOUS PIN WAS TRUE FOR TWELVE HOURS AND FORTY-SEVEN MINUTES. It was
+committed 2026-08-24 20:03 EDT recording that BRAND_STILL_GOLD and
+BRAND_STANDBY_GOLD were registered upstream but absent from upstream's own
+RNV_BRAND -- which was accurate when written. Upstream added the five gold
+keys the next morning, 2026-08-25 08:51 EDT (rnv-brand@9c9c8d2), and from
+that moment this file's note was false and nothing said so. It stayed false
+for eighteen days, through a green suite, and was found from outside by a
+consumer asking the live server for a PERMANENT brand colour and being
+refused.
 
-WHAT UPSTREAM GAINED AFTER 60bd56d1 AND THIS FILE DELIBERATELY DOES NOT
-CARRY: BRAND_STILL_GOLD (#9b907a, the seventh permanent, registered) and
-BRAND_STANDBY_GOLD (#ae986f, derived). Neither is in upstream's RNV_BRAND,
-so upstream's own resolver refuses "still gold" exactly as this one does.
-The mirror is faithful, not lagging. If a future sync adds either constant
-without adding the key, the resolver's behaviour is unchanged and this note
-is the record of why; if upstream adds the KEY, the wire-format guard in
-tests/test_brand_mirror.py fails until WIRE_KEYS is updated on purpose.
+That note also claimed the wire-format guard in tests/test_brand_mirror.py
+would fail if upstream added a key. IT COULD NOT. That guard compares this
+file to WIRE_KEYS, a constant in the test file; both sides of it live in
+this repository, so it fires when the MIRROR changes and is silent when
+UPSTREAM does -- the only case it was written for. A guard scoped to one
+side of a boundary cannot see the boundary.
+
+The check that can is scripts/check_brand_currency.py, which parses
+upstream's engine/brand.py and compares key sets. It runs in a SCHEDULED
+workflow that gates nothing, because upstream moving is a queue and not a
+defect of this repository; the same script runs in the gated path in
+--mode transcription, where a mismatch against the pin above IS a defect.
 
 Consumed by: engine/resolve.py, which imports RNV_BRAND and nothing else.
 
@@ -82,6 +92,33 @@ WHITE: Final[str] = "#ffffff"
 WEB_BLACK: Final[str] = "#0a0a0f"
 """rnvizion.dev ground; social and OG base. Blue-tinted, deliberately."""
 
+BRAND_STILL_GOLD: Final[str] = "#9b907a"
+"""Stillness: not-live, dead, absence of life. The seventh permanent,
+registered upstream 2026-08-23. Mirrored here 2026-09-12."""
+
+BRAND_STANDBY_GOLD: Final[str] = "#ae986f"
+"""The standby ring: running, but not the main event.
+
+Not a failure state. Anything absent is BRAND_STILL_GOLD instead.
+
+[MENTION: upstream renamed this identifier on 2026-08-23, value unchanged,
+because the retired spellings -- BRAND_DOWN_GOLD, and the word degraded --
+both assert that something is WRONG, which standby does not. The rename moved
+the identifiers cleanly and the meaning survived in four comments upstream,
+found and corrected the same day. This paragraph is a MENTION of the retired
+terms, not a use of them, and the sweep in tests/test_brand_mirror.py skips
+marked regions for exactly that reason: sweep it and you destroy the
+explanation, skip it and you keep the meaning. :MENTION]
+"""
+
+BRAND_BLUE: Final[str] = "#6f94bc"
+"""Dark-surface blue. The eighth permanent, and the register's second hue;
+registered upstream 2026-09-12."""
+
+BRAND_DARK_BLUE: Final[str] = "#456c91"
+"""Light-surface blue -- darker BECAUSE the ground is lighter, exactly as
+BRAND_DARK_GOLD is. The ninth permanent; registered upstream 2026-09-12."""
+
 # ==================== Resolver vocabulary ====================
 # RNV names beat CSS names on collision, so `gold` resolves to brand gold and
 # `css:gold` forces the universal one. "white" and "black" shadow CSS names at
@@ -99,6 +136,22 @@ RNV_BRAND: Final[dict[str, str]] = {
     "dark gold": BRAND_DARK_GOLD,
     "gold dark": BRAND_DARK_GOLD,
     "light-mode gold": BRAND_DARK_GOLD,
+    # The five gold keys upstream added 2026-08-25 (rnv-brand@9c9c8d2) and this
+    # mirror did not carry until 2026-09-12. "still gold" is a PERMANENT brand
+    # colour that this resolver refused for eighteen days.
+    "still gold": BRAND_STILL_GOLD,
+    "still-gold": BRAND_STILL_GOLD,
+    "stillness": BRAND_STILL_GOLD,
+    "standby gold": BRAND_STANDBY_GOLD,
+    "standby-gold": BRAND_STANDBY_GOLD,
+    # The blue pair, upstream 2026-09-12, mirrored the same day. "light-mode
+    # blue" follows "light-mode gold": the light-mode value is the DARKER one.
+    "blue": BRAND_BLUE,
+    "brand blue": BRAND_BLUE,
+    "rnv blue": BRAND_BLUE,
+    "dark blue": BRAND_DARK_BLUE,
+    "blue dark": BRAND_DARK_BLUE,
+    "light-mode blue": BRAND_DARK_BLUE,
     "black": TRUE_BLACK,
     "true black": TRUE_BLACK,
     "white": WHITE,
@@ -113,5 +166,9 @@ __all__ = [
     "TRUE_BLACK",
     "WHITE",
     "WEB_BLACK",
+    "BRAND_STILL_GOLD",
+    "BRAND_STANDBY_GOLD",
+    "BRAND_BLUE",
+    "BRAND_DARK_BLUE",
     "RNV_BRAND",
 ]
