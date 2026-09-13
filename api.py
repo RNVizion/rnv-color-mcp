@@ -107,7 +107,17 @@ def color_difference(color1: str, color2: str, method: str = "ciede2000") -> dic
     else:
         note = "near-opposite colors"
     return {
-        "delta_e": round(de, 4),
+        # UNROUNDED, for the reason contrast_check states twenty lines down:
+        # rounding moves a number toward whichever side is nearer, which is
+        # generous for a CEILING check ("within N of") and can pass a value
+        # that should fail. Every consumer in this ecosystem currently asks
+        # delta-E as a FLOOR (minimum separation), where round() could only
+        # ever be conservative -- which is why `round(de, 4)` sat here
+        # harmlessly and why the first ceiling consumer would have inherited
+        # the error silently. The caller is entitled to the real number; the
+        # short form is a separate field, never the value itself.
+        "delta_e": de,
+        "display": _truncate(de, 4),
         "method": method,
         "interpretation": note,
         "color1": ColorMath.rgb_to_hex(rgb1),
