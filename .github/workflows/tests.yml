@@ -9,14 +9,24 @@ on:
 
 jobs:
   pytest:
+    # 3.13 is what the Space's Dockerfile runs; 3.12 was the only version ever
+    # proven. Both are in the matrix rather than pinning the image down to the
+    # tested one, because the suite and the engine were measured identical on
+    # both (2026-09-12) -- so the fix is to widen the proof, not to downgrade
+    # production to match it.
+    name: pytest (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Install
@@ -27,3 +37,25 @@ jobs:
 
       - name: Run tests
         run: python -m pytest
+
+  mirror-transcription:
+    # THIS ONE GATES. A mirror that does not carry the commit it says it
+    # carries is this repository being wrong, which is a defect and stops the
+    # chain. Its sibling -- the same script in --mode currency, asking whether
+    # upstream has moved PAST the pin -- is a queue and lives in a scheduled
+    # workflow that gates nothing. See .github/workflows/brand-currency.yml.
+    #
+    # It is not in the pytest suite because the suite stays offline and
+    # credential-free, and this reads the network.
+    name: mirror matches its pinned commit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Compare mirror against upstream at SYNCED_SHA
+        run: python scripts/check_brand_currency.py --mode transcription
