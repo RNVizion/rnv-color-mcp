@@ -12,20 +12,33 @@ values came from.
 from __future__ import annotations
 
 import pathlib
+import inspect
 import re
 
 from engine import brand_vocab as V
 
 RETIRED_GOLD = "#b" "19145"
-SYNCED_SHA = "361c0e2a4b0ecb9109f358b5714ce8a630b75d69"
+SYNCED_SHA = "0d96ff889c9f59286326207d40493207b419128d"
 
 # The resolver vocabulary IS the wire format. A client sends these strings.
 WIRE_KEYS = {
     "near-black", "near black", "brand black", "rnv black", "charcoal",
     "gold", "brand gold", "rnv gold",
     "dark gold", "gold dark", "light-mode gold",
+    "still gold", "still-gold", "stillness",
+    "standby gold", "standby-gold",
+    "blue", "brand blue", "rnv blue",
+    "dark blue", "blue dark", "light-mode blue",
     "black", "true black", "white", "brand white", "web black",
 }
+
+# WHAT THIS SET CAN AND CANNOT CATCH. Both sides of the comparison below live
+# in this repository, so it fires when the mirror is edited without meaning to
+# and is SILENT when upstream adds a key. It went green for eighteen days over
+# a mirror eleven keys behind. The check that sees upstream is
+# scripts/check_brand_currency.py; it is not in this suite because the suite
+# stays offline, and it is not in the gated path in --mode currency because
+# upstream moving is a queue, not a defect of this repository.
 
 
 def test_registered_values_match_the_register():
@@ -73,6 +86,47 @@ def test_the_mirror_records_which_upstream_commit_it_carries():
     assert found[0] == SYNCED_SHA, (
         f"the mirror pins {found[0][:12]} but these values came from "
         f"{SYNCED_SHA[:12]}")
+
+
+def test_the_registered_additions_resolve():
+    """The four constants upstream registered after the 2026-08-24 pin.
+
+    still-gold is the case that earned this test: a PERMANENT brand colour
+    that the brand's own resolver refused from 2026-08-25 to 2026-09-12.
+    """
+    assert V.BRAND_STILL_GOLD == "#9b907a"
+    assert V.BRAND_STANDBY_GOLD == "#ae986f"
+    assert V.BRAND_BLUE == "#6f94bc"
+    assert V.BRAND_DARK_BLUE == "#456c91"
+    for alias in ("still gold", "still-gold", "stillness"):
+        assert V.RNV_BRAND[alias] == V.BRAND_STILL_GOLD, alias
+    for alias in ("standby gold", "standby-gold"):
+        assert V.RNV_BRAND[alias] == V.BRAND_STANDBY_GOLD, alias
+    for alias in ("blue", "brand blue", "rnv blue"):
+        assert V.RNV_BRAND[alias] == V.BRAND_BLUE, alias
+    for alias in ("dark blue", "blue dark", "light-mode blue"):
+        assert V.RNV_BRAND[alias] == V.BRAND_DARK_BLUE, alias
+
+
+def test_standby_is_not_described_by_the_retired_meaning():
+    """A rename is complete when nothing still describes the thing by the
+    meaning that was retired -- not when the identifiers move.
+
+    Upstream's own rename moved three identifiers by regex and left the
+    retired meaning standing in four comments, in the exact place a reader
+    looks to learn what a value is FOR. This is that check, one repository
+    out.
+
+    It skips [MENTION: ... :MENTION] regions, because the paragraph explaining
+    why a term was retired necessarily contains the term. Sweep the mentions
+    and you destroy the explanation; skip the uses and you keep the meaning.
+    The marker is what lets one pass do both.
+    """
+    src = re.sub(r"\[MENTION:.*?:MENTION\]", "", inspect.getsource(V), flags=re.S)
+    for retired in ("degraded", "BRAND_DOWN_GOLD", "signal-down", "signal-ring-down"):
+        assert retired not in src, (
+            f"outside a MENTION marker, the mirror still describes standby "
+            f"by the retired term {retired!r}")
 
 
 def test_the_retired_rationale_is_not_asserted_as_current():
