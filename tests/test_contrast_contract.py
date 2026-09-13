@@ -68,3 +68,41 @@ def test_a_known_pair_that_sits_close_to_a_bar_still_reads_correctly():
     r = api.contrast_check("#000000", "#b" "19145")
     assert r["ratio"] > 7.0
     assert float(r["display"].split(":")[0]) >= 7.0, r["display"]
+
+
+# --------------------------------------------------------------------------
+# color_difference: the same contract, added 2026-09-12.
+#
+# contrast_check has returned an unrounded ratio beside a truncated display
+# since it was written; color_difference rounded its reported figure. Two
+# tools in one file disagreeing about whether the caller gets the real number
+# is the defect, not the 5e-5 -- an asymmetry inside one API surfaces as a
+# bug in whichever consumer arrives first and reads the wrong one.
+
+
+def test_delta_e_is_not_rounded():
+    """The returned value is the computed float, not a rounded report."""
+    r = api.color_difference("#d2bc93", "#8c7337")
+    de = r["delta_e"]
+    assert isinstance(de, float)
+    assert de != round(de, 4) or float(f"{de:.10f}") == de
+    # the real check: the value survives a round-trip no rounded figure would
+    assert abs(de - float(repr(de))) == 0.0
+
+
+def test_delta_e_display_truncates_and_never_overstates():
+    """Truncation is the conservative direction for a floor and the honest
+    one for a ceiling: the display can never claim more separation than the
+    real value has."""
+    for a, b in (("#d2bc93", "#8c7337"), ("#9b907a", "#ae986f"),
+                 ("#6f94bc", "#456c91"), ("#000000", "#ffffff")):
+        r = api.color_difference(a, b)
+        shown = float(r["display"])
+        assert shown <= r["delta_e"] + 1e-12, (a, b, shown, r["delta_e"])
+        assert r["delta_e"] - shown < 1e-4, (a, b)
+
+
+def test_delta_e_of_a_color_with_itself_is_zero():
+    """Positive control: if this is not 0.0 the harness is wrong, not the
+    engine."""
+    assert api.color_difference("#d2bc93", "#d2bc93")["delta_e"] == 0.0
