@@ -26,8 +26,8 @@ across six repos, and a system that cannot hold one identifier across its
 own repositories is not positioned to align anyone else's. The names now
 match upstream. The check still compares values.
 
-Mirrored from rnv-brand@a46a9eac6dd48b1fc13257be7a1121610d7dad6d, 2026-09-13.
-Previously rnv-brand@0d96ff889c9f, 2026-09-12; @361c0e2a4b0e, 2026-08-24; @60bd56d1bf5c, 2026-08-22;
+Mirrored from rnv-brand@9ddde4572859748e56e1ae532738f6a9cc548cbc, 2026-09-13.
+Previously rnv-brand@a46a9eac6dd4, 2026-09-13; @0d96ff889c9f, 2026-09-12; @361c0e2a4b0e, 2026-08-24; @60bd56d1bf5c, 2026-08-22;
 and @c4d479dbf16b, 2026-08-10, which carried the gold retired on 2026-08-17.
 A mirror whose contents moved and whose SHA did not is worse than one that
 is plainly stale: the SHA asserts it is current.
@@ -115,19 +115,28 @@ BRAND_BLUE: Final[str] = "#6f94bc"
 """Dark-surface blue. The eighth permanent, and the register's second hue;
 registered upstream 2026-09-12."""
 
-BRAND_WEB_CODE: Final[str] = "#00b0a0"
+BRAND_TEAL: Final[str] = "#00b0a0"
 """A brand colour, permanently registered; the tenth. Its first role is inline
 code on the web, emitted as --rnv-code, but a role is where a colour starts
-rather than where it is confined: brand colours are the base set the brand
+rather than where it is confined -- which upstream acted on.
+
+[MENTION: this constant was BRAND_WEB_CODE for one day and was renamed
+2026-09-13, because a name that states a surface is not undone by documentation
+saying the colour is not confined to it. The PERMANENT key moved with it,
+web-code to teal. The WEB key, the emitted token and the value are all
+unchanged, and "web-code" is kept below as a resolver alias so the name it
+shipped under still answers -- a retired IDENTIFIER, not a retired key. :MENTION] brand colours are the base set the brand
 reuses, derives from, and builds ramps out of. Expect it anywhere the register
 is consumed, the fashion app included.
 
 What upstream means by "not a third brand hue" is narrower than membership and
-should not be read as "not a brand colour": gold and blue each carry a
-light-surface partner (BRAND_DARK_GOLD, BRAND_DARK_BLUE) so they work on either
-ground, and no single teal clears 4.5 on both #1a1a1a and #f5f5f5 -- the
-ceiling for any value on both is 3.9954 -- so that partner has not been
-derived. A completeness question about the hue, not a membership question
+should not be read as "not a brand colour". NO COLOUR CLEARS 4.5 ON BOTH
+#1a1a1a AND #f5f5f5: the two grounds need Y >= 0.2215 and Y <= 0.1640, which do
+not overlap, and setting the ratios equal gives a ceiling of 3.9954:1 for every
+colour that exists. That is why every text role in the register is a PAIR --
+gold with BRAND_DARK_GOLD, blue with BRAND_DARK_BLUE -- and the teal simply has
+no partner derived yet. It is short of nothing the gold and the blue were not
+also short of. A completeness question about the hue, not a membership question
 about the colour.
 
 Registered upstream 2026-09-12, mirrored 2026-09-13. Upstream states it was
@@ -174,10 +183,14 @@ RNV_BRAND: Final[dict[str, str]] = {
     # Inline-code teal, upstream 2026-09-12, mirrored 2026-09-13. Caught by
     # scripts/check_brand_currency.py the day after that check landed -- its
     # first live find, against eighteen days for the gap before it.
-    "code": BRAND_WEB_CODE,
-    "code teal": BRAND_WEB_CODE,
-    "web code": BRAND_WEB_CODE,
-    "web-code": BRAND_WEB_CODE,
+    "teal": BRAND_TEAL,
+    "brand teal": BRAND_TEAL,
+    "code": BRAND_TEAL,
+    "code teal": BRAND_TEAL,
+    "web code": BRAND_TEAL,
+    # Kept deliberately: the name this colour shipped under on 2026-09-12,
+    # before the 2026-09-13 rename. Nothing that resolved stops resolving.
+    "web-code": BRAND_TEAL,
     "black": TRUE_BLACK,
     "true black": TRUE_BLACK,
     "white": WHITE,
@@ -196,6 +209,6 @@ __all__ = [
     "BRAND_STANDBY_GOLD",
     "BRAND_BLUE",
     "BRAND_DARK_BLUE",
-    "BRAND_WEB_CODE",
+    "BRAND_TEAL",
     "RNV_BRAND",
 ]
