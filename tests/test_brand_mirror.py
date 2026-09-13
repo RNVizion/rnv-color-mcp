@@ -18,7 +18,7 @@ import re
 from engine import brand_vocab as V
 
 RETIRED_GOLD = "#b" "19145"
-SYNCED_SHA = "a46a9eac6dd48b1fc13257be7a1121610d7dad6d"
+SYNCED_SHA = "9ddde4572859748e56e1ae532738f6a9cc548cbc"
 
 # The resolver vocabulary IS the wire format. A client sends these strings.
 WIRE_KEYS = {
@@ -29,7 +29,7 @@ WIRE_KEYS = {
     "standby gold", "standby-gold",
     "blue", "brand blue", "rnv blue",
     "dark blue", "blue dark", "light-mode blue",
-    "code", "code teal", "web code", "web-code",
+    "teal", "brand teal", "code", "code teal", "web code", "web-code",
     "black", "true black", "white", "brand white", "web black",
 }
 
@@ -99,7 +99,7 @@ def test_the_registered_additions_resolve():
     assert V.BRAND_STANDBY_GOLD == "#ae986f"
     assert V.BRAND_BLUE == "#6f94bc"
     assert V.BRAND_DARK_BLUE == "#456c91"
-    assert V.BRAND_WEB_CODE == "#00b0a0"
+    assert V.BRAND_TEAL == "#00b0a0"
     for alias in ("still gold", "still-gold", "stillness"):
         assert V.RNV_BRAND[alias] == V.BRAND_STILL_GOLD, alias
     for alias in ("standby gold", "standby-gold"):
@@ -108,11 +108,12 @@ def test_the_registered_additions_resolve():
         assert V.RNV_BRAND[alias] == V.BRAND_BLUE, alias
     for alias in ("dark blue", "blue dark", "light-mode blue"):
         assert V.RNV_BRAND[alias] == V.BRAND_DARK_BLUE, alias
-    for alias in ("code", "code teal", "web code", "web-code"):
-        assert V.RNV_BRAND[alias] == V.BRAND_WEB_CODE, alias
+    for alias in ("teal", "brand teal", "code", "code teal", "web code",
+                  "web-code"):
+        assert V.RNV_BRAND[alias] == V.BRAND_TEAL, alias
 
 
-def test_standby_is_not_described_by_the_retired_meaning():
+def test_retired_identifiers_are_not_used_outside_a_mention():
     """A rename is complete when nothing still describes the thing by the
     meaning that was retired -- not when the identifiers move.
 
@@ -127,7 +128,8 @@ def test_standby_is_not_described_by_the_retired_meaning():
     The marker is what lets one pass do both.
     """
     src = re.sub(r"\[MENTION:.*?:MENTION\]", "", inspect.getsource(V), flags=re.S)
-    for retired in ("degraded", "BRAND_DOWN_GOLD", "signal-down", "signal-ring-down"):
+    for retired in ("degraded", "BRAND_DOWN_GOLD", "signal-down",
+                    "signal-ring-down", "BRAND_WEB_CODE"):
         assert retired not in src, (
             f"outside a MENTION marker, the mirror still describes standby "
             f"by the retired term {retired!r}")
