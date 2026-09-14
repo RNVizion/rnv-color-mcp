@@ -48,6 +48,7 @@ pytestmark = [
 
 WRITE_TOOL = "save_palette"
 READ_TOOLS = {
+    "place_lightness",
     "mix_colors",
     "convert_color",
     "generate_harmony",
@@ -111,14 +112,25 @@ class TestVisibility:
         assert WRITE_TOOL not in names
 
     async def test_read_token_sees_every_read_tool(self, url, read_token):
+        """Equality, not subset, and the difference is the point.
+
+        `READ_TOOLS <= names` passes when a new read tool is added and nobody
+        updates this set -- the new tool's scope is then never checked, and the
+        suite stays green while covering less than it did. Equality turns that
+        silent under-coverage into a failing test that names the tool. Found
+        when place_lightness was added and this assertion did not notice.
+        """
         async with Client(url, auth=BearerAuth(read_token)) as c:
             names = {t.name for t in await c.list_tools()}
-        assert READ_TOOLS <= names
+        assert names == READ_TOOLS, (
+            f"read-scope surface changed: {names ^ READ_TOOLS} -- add it to "
+            f"READ_TOOLS on purpose, or it goes unchecked"
+        )
 
-    async def test_write_token_sees_all_nine(self, url, write_token):
+    async def test_write_token_sees_every_tool(self, url, write_token):
         async with Client(url, auth=BearerAuth(write_token)) as c:
             names = {t.name for t in await c.list_tools()}
-        assert len(names) == 9
+        assert len(names) == 10
         assert WRITE_TOOL in names
 
 
