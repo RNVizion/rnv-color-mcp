@@ -163,6 +163,29 @@ mcp.tool(
 )
 
 mcp.tool(
+    api.place_lightness,
+    **_scoped("read"),
+    description=(
+        "Hold a color's hue and chroma and set its lightness, returning one result per "
+        "requested L*. color accepts a hex, CSS name, RNV brand name, or saved-palette "
+        "reference; lightness is a list of L* values in 0-100. "
+        "This is the operation behind a LIGHT/DARK PAIR: one hue at two lightnesses, with "
+        "a and b held exactly, which is how a color that works on a dark ground gets a "
+        "partner that works on a light one. Use it when you need the same color at a "
+        "different lightness; use mix_colors when you need a different color. "
+        "Returns the source color's LAB, and for each placement the hex, the achieved LAB, "
+        "and the quantization error per axis -- 8-bit hex cannot store a and b to the "
+        "precision LAB expresses, so two placements of one hue differ by a few hundredths "
+        "on both axes however exactly the input held them. That is the storage format, not "
+        "the operation, and it is reported rather than hidden. "
+        "Read-only and deterministic. Refuses rather than clamps: not every (L*, a, b) "
+        "exists in sRGB, and a lightness too far from a chromatic color's range is "
+        "rejected with the reason instead of being silently moved to the nearest color "
+        "that fits."
+    ),
+)
+
+mcp.tool(
     api.generate_harmony,
     **_scoped("read"),
     description=(
