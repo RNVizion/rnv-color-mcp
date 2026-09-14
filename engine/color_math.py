@@ -231,6 +231,54 @@ class ColorMath:
         )
     
     @staticmethod
+    def lab_to_rgb_exact(lab: RGBFloat) -> RGB | None:
+        """LAB -> RGB, or None when the triple has no sRGB representation.
+
+        `lab_to_rgb` above clamps out-of-gamut channels to 0..255 silently,
+        which turns "this colour does not exist in sRGB" into "here is a
+        different colour" -- a guess wearing the shape of an answer. Callers
+        that must refuse rather than guess use this instead.
+
+        In gamut is judged before clamping and with a tolerance of half a
+        quantisation step, so a triple that rounds cleanly into range is NOT
+        refused: the test is whether clamping would change the value, not
+        whether the arithmetic strayed in the last decimal place.
+        """
+        L, a, b_val = lab
+
+        fy = (L + 16) / 116
+        fx = a / 500 + fy
+        fz = fy - b_val / 200
+
+        def f_inv(t: float) -> float:
+            return t ** 3 if t > 0.206893 else (116 * t - 16) / 903.3
+
+        xn, yn, zn = 0.95047, 1.0, 1.08883
+        x, y, z = xn * f_inv(fx), yn * f_inv(fy), zn * f_inv(fz)
+
+        linear = (
+            x * 3.2404542 + y * -1.5371385 + z * -0.4985314,
+            x * -0.9692660 + y * 1.8760108 + z * 0.0415560,
+            x * 0.0556434 + y * -0.2040259 + z * 1.0572252,
+        )
+
+        # A negative linear channel has no gamma-encoded value at all; a
+        # channel over 1.0 encodes to over 1.0. Half a step at 8-bit is the
+        # point past which clamping is lossy.
+        half_step = 0.5 / 255
+        for c in linear:
+            if c < 0.0:
+                if abs(c) > 1e-9:
+                    return None
+                continue
+            if c > 1.0:
+                encoded = 1.055 * (c ** (1 / 2.4)) - 0.055
+                if encoded - 1.0 > half_step:
+                    return None
+
+        return ColorMath.lab_to_rgb(lab)
+
+    @staticmethod
     def delta_e(rgb1: RGB, rgb2: RGB, method: str = "ciede2000") -> float:
         """Perceptual color difference between two RGB colors.
 
