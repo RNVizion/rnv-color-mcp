@@ -38,6 +38,38 @@ jobs:
       - name: Run tests
         run: python -m pytest
 
+      # The mirror must carry the commit it SAYS it carries before that claim
+      # ships to production. This is the transcription half of the brand check;
+      # the currency half (has upstream moved PAST the pin) deliberately does
+      # NOT run here, because upstream moving is not a defect of this
+      # repository and must never block a deploy. Gate a defect, warn about a
+      # queue.
+      #
+      # Exit 2 is what makes this safe to put on the deploy path at all: the
+      # check reads the network, and an unreachable GitHub is someone else's
+      # outage, not a bad mirror. Without the distinction this step would
+      # block every deploy during an upstream incident, which is a queue
+      # failing a defect gate -- the exact shape that teaches people to
+      # disable a check.
+      - name: Mirror matches its pinned commit
+        run: |
+          set +e
+          python scripts/check_brand_currency.py --mode transcription
+          code=$?
+          set -e
+          case $code in
+            0)
+              echo "mirror verified against its pinned commit"
+              ;;
+            2)
+              echo "::warning title=Mirror not verified::Upstream was unreachable, so the mirror could not be checked against its pin. This is an outage, not a mismatch -- deploying."
+              ;;
+            *)
+              echo "::error title=Mirror does not match its pin::engine/brand_vocab.py does not carry the commit its docstring claims. Fix the mirror or the pin before this ships."
+              exit 1
+              ;;
+          esac
+
   sync-to-hub:
     needs: test               # the gate: no green suite, no deploy
     runs-on: ubuntu-latest
