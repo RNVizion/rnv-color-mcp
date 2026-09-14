@@ -7,6 +7,8 @@ that governed three repositories.
 """
 from __future__ import annotations
 
+import pytest
+
 import api
 
 
@@ -106,3 +108,72 @@ def test_delta_e_of_a_color_with_itself_is_zero():
     """Positive control: if this is not 0.0 the harness is wrong, not the
     engine."""
     assert api.color_difference("#d2bc93", "#d2bc93")["delta_e"] == 0.0
+
+
+# --------------------------------------------------------------------------
+# place_lightness: the register's pair-construction rule, made executable.
+#
+# Added 2026-09-14 after a published derivation said "placed in LAB" with no
+# tool behind the sentence -- the step had been done by hand in a scratch
+# script. These cases pin the two things that make the tool trustworthy: it
+# reproduces the register's own published values, and it refuses instead of
+# clamping.
+
+
+def test_it_reproduces_the_registers_blue_pair():
+    """The load-bearing case. BRAND_BLUE and BRAND_DARK_BLUE were built from
+    one mix at two lightnesses; if this tool cannot rebuild them it does not
+    implement the rule it claims to."""
+    out = api.place_lightness("#5c82a9", [60.16, 44.17])
+    assert [p["hex"] for p in out["placements"]] == ["#6f94bc", "#456c91"]
+
+
+def test_the_source_lab_is_unrounded():
+    out = api.place_lightness("#5c82a9", [50.0])
+    lab = out["source"]["lab"]
+    assert lab["a"] != round(lab["a"], 4)
+
+
+def test_quantization_error_is_reported_not_hidden():
+    """8-bit hex cannot hold a and b to LAB's precision. The tool must say so
+    per placement rather than imply the request was met exactly."""
+    out = api.place_lightness("#5c82a9", [60.16, 44.17])
+    for p in out["placements"]:
+        err = p["quantization_error"]
+        assert set(err) == {"L", "a", "b"}
+        src = out["source"]["lab"]
+        assert abs(p["achieved"]["a"] - src["a"] - err["a"]) < 1e-9
+        assert abs(p["achieved"]["b"] - src["b"] - err["b"]) < 1e-9
+    # and the spread between two placements of one hue is real, not zero
+    a0, a1 = (p["achieved"]["a"] for p in out["placements"])
+    assert abs(a0 - a1) > 0.0
+
+
+def test_out_of_gamut_is_refused_not_clamped():
+    """The whole point of lab_to_rgb_exact. #5c82a9's hue runs out of sRGB
+    above L* ~83.9; asking for 95 must name the problem, not return the
+    nearest color that happens to fit."""
+    with pytest.raises(ValueError) as exc:
+        api.place_lightness("#5c82a9", [95.0])
+    assert "no sRGB representation" in str(exc.value)
+
+
+def test_lightness_outside_the_scale_is_refused():
+    with pytest.raises(ValueError):
+        api.place_lightness("#5c82a9", [140.0])
+    with pytest.raises(ValueError):
+        api.place_lightness("#5c82a9", [])
+
+
+def test_placing_at_the_source_lightness_is_a_round_trip():
+    """Positive control. Asking for the lightness a color already has must
+    return that color; if it does not, the harness or the conversion pair is
+    wrong, not the placement logic."""
+    src = api.place_lightness("#5c82a9", [50.0])["source"]["lab"]
+    out = api.place_lightness("#5c82a9", [src["L"]])
+    assert out["placements"][0]["hex"] == "#5c82a9"
+
+
+def test_it_resolves_brand_names_like_every_other_tool():
+    out = api.place_lightness("brand blue", [44.17])
+    assert out["placements"][0]["hex"] == "#456c91"
