@@ -80,6 +80,68 @@ def convert_color(color: str, to: str | None = None) -> dict[str, Any]:
     return all_formats
 
 
+def place_lightness(color: str, lightness: list[float]) -> dict[str, Any]:
+    """Hold a colour's hue and chroma, set its lightness -- the register's own
+    construction rule for a text pair, made executable.
+
+    RNV builds a pair as ONE HUE AT TWO LIGHTNESSES: take a colour, keep `a`
+    and `b` exactly, set `L*` to each rung. BRAND_BLUE and BRAND_DARK_BLUE were
+    built this way from a single mix, as were the status text pairs. Until now
+    the step was done by hand in a scratch script, which is why a published
+    derivation could say "placed in LAB" with no tool behind the sentence.
+
+    Returns what was ASKED FOR and what was ACHIEVED, per placement. Eight-bit
+    hex cannot store `a` and `b` to the precision LAB expresses them, so two
+    placements of one hue come back a few hundredths apart on both axes no
+    matter how exactly the input held them. That is the storage format, not the
+    operation -- and a tool that hid it would be handing back a value slightly
+    different from the one requested while implying they were the same.
+
+    Refuses rather than clamps. Not every (L*, a, b) exists in sRGB; a
+    lightness too far from a chromatic colour's range has no representation,
+    and the honest answer is the refusal, not the nearest colour that does fit.
+    """
+    if not lightness:
+        raise ValueError("place_lightness needs at least one lightness value.")
+
+    rgb = ColorMath.hex_to_rgb(resolve_color(color, _store))
+    src_L, src_a, src_b = ColorMath.rgb_to_lab(rgb)
+
+    placements: list[dict[str, Any]] = []
+    for target in lightness:
+        if not 0.0 <= target <= 100.0:
+            raise ValueError(
+                f"Lightness {target} is outside the L* range 0-100."
+            )
+        placed = ColorMath.lab_to_rgb_exact((target, src_a, src_b))
+        if placed is None:
+            raise ValueError(
+                f"L* {target} has no sRGB representation while holding "
+                f"a={src_a:.4f} b={src_b:.4f} (from {ColorMath.rgb_to_hex(rgb)}). "
+                f"Pick a lightness nearer the source's, or accept a chroma change."
+            )
+        got_L, got_a, got_b = ColorMath.rgb_to_lab(placed)
+        placements.append({
+            "lightness": target,
+            "hex": ColorMath.rgb_to_hex(placed),
+            "rgb": list(placed),
+            "achieved": {"L": got_L, "a": got_a, "b": got_b},
+            "quantization_error": {
+                "L": got_L - target,
+                "a": got_a - src_a,
+                "b": got_b - src_b,
+            },
+        })
+
+    return {
+        "source": {
+            "hex": ColorMath.rgb_to_hex(rgb),
+            "lab": {"L": src_L, "a": src_a, "b": src_b},
+        },
+        "placements": placements,
+    }
+
+
 def generate_harmony(base: str, scheme: str) -> list[str]:
     """Generate a color harmony from a base hex color. scheme is one of
     complementary | analogous | triadic | split-complementary |
