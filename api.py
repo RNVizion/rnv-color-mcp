@@ -22,6 +22,13 @@ from engine.palette_store import PaletteStore
 from engine.resolve import CSS_NAMES, RNV_BRAND, UnknownColor, normalize_hex, resolve_color
 
 # ---- mix mode -> ColorMath method ---------------------------------------
+# The published contract since Phase 0: the tool description, the README, and the
+# Runbook all say "up to 12". Enforced here since 2026-09-27; before that the code
+# accepted any count while every public surface promised a limit. The count comes
+# from the desktop mixer's slot count, not from the math, and the locked scope
+# widens only on demand already in evidence -- none has been asked for.
+MAX_MIX_COLORS = 12
+
 _MIX_MODES = {
     "rgb": ColorMath.weighted_rgb_mix,     # additive average (blend like light)
     "hsv": ColorMath.weighted_hsv_mix,     # circular-hue average
@@ -46,6 +53,11 @@ def mix_colors(
     rgb | hsv | lab | paint | ryb | cmy. Returns the mixed color."""
     if not colors:
         raise ValueError("Provide at least one color to mix.")
+    if len(colors) > MAX_MIX_COLORS:
+        raise ValueError(
+            f"mix_colors blends up to {MAX_MIX_COLORS} colors; got {len(colors)}. "
+            f"Mix in stages: blend a subset, then mix that result with the rest."
+        )
     if mode not in _MIX_MODES:
         raise ValueError(f"Unknown mode '{mode}'. Choose from {sorted(_MIX_MODES)}.")
     if weights is None:
