@@ -262,7 +262,7 @@ mcp.tool(
         "there is no separate update operation. "
         "Returns a `durable` flag: true if the palette reached durable storage (the HF Dataset) "
         "and will survive a restart, false if it saved to the local working copy only (which is "
-        "lost on rebuild, e.g. when the Space HF_TOKEN is missing or lacks write scope). "
+        "lost on rebuild), with `durable_reason` naming the step that stopped it. "
         "Use when the user wants to keep a set of colors under a name for reuse across sessions, "
         "such as a brand or launch palette; to read a palette back use get_palette, and to see "
         "what already exists use list_palettes. The saved name can then be passed to mix_colors, "

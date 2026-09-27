@@ -282,6 +282,9 @@ class SavePaletteResult(BaseModel):
     durable: bool = Field(
         description="True if the palette was written through to the durable HF Dataset and will survive a Space rebuild; False if it saved to the local working copy only (e.g. the Space HF_TOKEN is missing or lacks write scope), meaning it will be lost on the next restart."
     )
+    durable_reason: str = Field(
+        description="Empty when durable is true. Otherwise names the step that stopped durability: no token, the Dataset could not be reached or hydrated at startup, or the push failed. A false flag with no reason is a shrug; this is the reason."
+    )
 
 
 def _reserved_palette_name(name: str) -> str | None:
@@ -336,7 +339,7 @@ def save_palette(
 
     The returned `durable` flag reports whether the save reached durable storage (the HF
     Dataset) or only the local working copy; a False here means the palette will not survive
-    a Space rebuild and the Space's HF_TOKEN should be checked.
+    a Space rebuild, and `durable_reason` says which step stopped it.
     """
     if not colors:
         raise ValueError("Provide at least one color to save.")
@@ -358,6 +361,7 @@ def save_palette(
         color_count=len(resolved),
         overwritten=existed,
         durable=bool(result.get("durable", False)),
+        durable_reason=str(result.get("durable_reason", "")),
     )
 
 

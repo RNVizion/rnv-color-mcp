@@ -14,6 +14,16 @@ Durability modes:
 
 Adopts the desktop app's PaletteMetadata schema so palettes stay portable.
 Atomic local writes; HF push is best-effort (a failed sync never loses the local save).
+
+The one thing a best-effort push must never do is overwrite the Dataset with less
+than it holds. Hydration at startup is what makes a push safe: the local file is a
+superset of the Dataset only if the Dataset was read first. So a startup that could
+NOT read the Dataset -- network down, rate-limited, a copy that failed -- leaves the
+store local-only for the life of the process, and every save reports `durable: False`
+with the reason. Only a confirmed "no palettes.json in the Dataset yet" starts empty
+and ready. Before 2026-09-27 both cases were one bare `except: pass`, and a transient
+outage at boot followed by a single save would have pushed a one-palette file over
+every palette the Dataset held.
 """
 from __future__ import annotations
 
@@ -41,6 +51,10 @@ class PaletteStore:
         self.hf_token = hf_token or os.environ.get("HF_TOKEN")
         self.hf_repo = hf_repo or os.environ.get("RNV_PALETTE_DATASET")
         self._hf_ready = False
+        # Why the store is not durable, in the words a caller can act on. Set at
+        # startup and overwritten by a failed push; empty means the last save
+        # reached the Dataset.
+        self.durable_reason = "no HF_TOKEN: local working copy only"
         self._data: dict[str, dict[str, Any]] = {}
         if self.hf_token:
             self._init_hf()
@@ -48,9 +62,25 @@ class PaletteStore:
 
     # ---- HF dataset backend (best-effort) ------------------------------
     def _init_hf(self) -> None:
-        """Resolve/create the dataset repo and hydrate the local file from it."""
+        """Resolve/create the dataset repo and hydrate the local file from it.
+
+        Three outcomes, and the middle one is the whole point:
+
+        - hydrated: the Dataset's palettes.json is now the local file. Ready.
+        - not found: the Dataset has no palettes.json yet. Start empty. Ready.
+        - could not look: anything else -- unreachable, rate-limited, a copy
+          that failed. NOT ready: a push from here would overwrite the Dataset
+          with a file that never contained what the Dataset holds.
+
+        `LocalEntryNotFoundError` is checked BEFORE `EntryNotFoundError`
+        because it subclasses it: the hub raises the Local variant for "the
+        entry may exist on the Hub, the network did not answer" -- an outage
+        wearing the not-found class. Catching the parent first would file an
+        outage as an empty Dataset, which is exactly the clobber this guards.
+        """
         try:
             from huggingface_hub import HfApi, hf_hub_download
+            from huggingface_hub.errors import EntryNotFoundError, LocalEntryNotFoundError
 
             api = HfApi(token=self.hf_token)
             if not self.hf_repo:
@@ -58,22 +88,36 @@ class PaletteStore:
             api.create_repo(
                 self.hf_repo, repo_type="dataset", private=True, exist_ok=True
             )
-            self._hf_ready = True
-            # hydrate: pull the existing palettes.json into the local working file
-            try:
-                local = hf_hub_download(
-                    self.hf_repo, HF_FILENAME, repo_type="dataset", token=self.hf_token
-                )
-                self.path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(local, self.path)
-            except Exception:
-                pass  # no file in the dataset yet; start empty
-        except Exception:
-            self._hf_ready = False  # degrade to local-only
+        except Exception as exc:  # could not even reach or resolve the Dataset
+            self._hf_ready = False
+            self.durable_reason = f"Dataset unreachable at startup ({type(exc).__name__}): local working copy only"
+            return
+
+        try:
+            local = hf_hub_download(
+                self.hf_repo, HF_FILENAME, repo_type="dataset", token=self.hf_token
+            )
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(local, self.path)
+        except LocalEntryNotFoundError as exc:
+            # "may exist on the Hub" -- the network did not answer. Not a
+            # not-found; a could-not-look. Refuse to be a durable writer.
+            self._hf_ready = False
+            self.durable_reason = f"Dataset could not be hydrated at startup ({type(exc).__name__}): local working copy only"
+            return
+        except EntryNotFoundError:
+            pass  # confirmed: no palettes.json in the Dataset yet; start empty
+        except Exception as exc:
+            self._hf_ready = False
+            self.durable_reason = f"Dataset could not be hydrated at startup ({type(exc).__name__}): local working copy only"
+            return
+
+        self._hf_ready = True
+        self.durable_reason = ""
 
     def _push_hf(self) -> bool:
         if not self._hf_ready:
-            return False
+            return False  # durable_reason already says why, since startup
         try:
             from huggingface_hub import HfApi
 
@@ -84,9 +128,12 @@ class PaletteStore:
                 repo_type="dataset",
                 commit_message="Update palettes",
             )
+            self.durable_reason = ""
             return True
-        except Exception:
-            return False  # local save already succeeded; durability sync failed
+        except Exception as exc:
+            # local save already succeeded; durability sync failed
+            self.durable_reason = f"push to the Dataset failed ({type(exc).__name__}): saved to the local working copy only"
+            return False
 
     # ---- persistence ----------------------------------------------------
     def _load(self) -> None:
@@ -136,7 +183,13 @@ class PaletteStore:
 
         self._data[name] = {"colors": colors, "metadata": meta.to_dict()}
         durable = self._save()
-        return {"name": name, "colors": colors, "saved": True, "durable": durable}
+        return {
+            "name": name,
+            "colors": colors,
+            "saved": True,
+            "durable": durable,
+            "durable_reason": "" if durable else self.durable_reason,
+        }
 
     def list_palettes(self) -> list[dict[str, Any]]:
         """Return every saved palette as {name, colors}."""
