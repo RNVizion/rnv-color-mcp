@@ -4,3 +4,4 @@ dev_public_key.pem
 server.log
 __pycache__/
 *.pyc
+palettes.json

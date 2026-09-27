@@ -1,23 +1,42 @@
 """
 Phase 1 smoke test: prove the extracted engine + store run standalone (no Qt, no GUI),
-and that all seven tools and all six mix modes behave.
+and that every api function and all six mix modes behave.
 
 Run from repo root:  python tests/smoke_test.py
+
+ISOLATED FROM PRODUCTION DATA. The palette store reads HF_TOKEN at construction, and a
+Codespace carries one; before 2026-09-27 each temporary store below would have hydrated
+from the production Dataset and pushed its "Spring line" saves back over it. The token
+is now removed and the default store pointed at a throwaway path before `api` is
+imported -- the same two lines tests/conftest.py uses.
+
+The setup runs only under __main__, and `api` is imported inside main(): pytest's
+default glob matches *_test.py, so this module is imported at collection, and mutating
+the environment there would change the suite's own configuration.
 """
+import os
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import api
-from engine.palette_store import PaletteStore
-
 BRAND_NEAR_BLACK = "#1a1a1a"  # canonical brand black (charcoal)
 BRAND_GOLD = "#d2bc93"
 
 
+def _isolate_from_production() -> None:
+    os.environ["RNV_PALETTE_STORE"] = os.path.join(
+        tempfile.mkdtemp(prefix="rnv-smoke-"), "palettes.json"
+    )
+    os.environ.pop("HF_TOKEN", None)
+
+
 def main() -> None:
+    import api
+    from engine.palette_store import PaletteStore
+
+    assert not api._store.hf_token, "smoke run is holding an HF token; refusing to touch the Dataset"
     failures = []
 
     # 1. mix_colors across all six modes
@@ -36,6 +55,11 @@ def main() -> None:
     assert set(conv) == {"hex", "rgb", "hsv", "hsl", "lab"}, "convert missing formats"
     one = api.convert_color(BRAND_GOLD, to="rgb")
     print(f"convert_color {BRAND_GOLD} -> rgb {one['rgb']}")
+
+    # 2b. place_lightness: the register's blue pair, rebuilt from its mix
+    placed = [p["hex"] for p in api.place_lightness("#5c82a9", [60.16, 44.17])["placements"]]
+    assert placed == ["#6f94bc", "#456c91"], f"blue pair did not reproduce: {placed}"
+    print(f"place_lightness #5c82a9 @ L* 60.16 / 44.17 -> {placed}")
 
     # 3. generate_harmony across schemes
     print("generate_harmony:")
@@ -77,8 +101,11 @@ def main() -> None:
 
     # 7. plain-language resolution: CSS names, RNV brand, palette refs, refusal
     print("name resolution:")
-    rb = api.mix_colors(["red", "blue"], mode="rgb")
-    print(f"  mix red + blue (rgb)        -> {rb['hex']}")
+    # "blue" is RNV blue (#6f94bc), not CSS blue: brand names win on collision,
+    # and css:blue forces the universal one.
+    rb = api.mix_colors(["red", "css:blue"], mode="rgb")
+    print(f"  mix red + css:blue (rgb)    -> {rb['hex']}")
+    assert api.convert_color("blue", to="hex")["hex"] == "#6f94bc", "'blue' should be RNV blue"
     bg = api.convert_color("brand gold", to="hex")
     assert bg["hex"] == BRAND_GOLD, "RNV 'brand gold' should be #d2bc93"
     print(f"  convert 'brand gold'        -> {bg['hex']}")
@@ -120,4 +147,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    _isolate_from_production()
     main()
