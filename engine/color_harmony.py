@@ -245,35 +245,44 @@ class ColorHarmony:
         return counts.get(harmony_type, 1)
 
 
+# The scheme names the by-name entry point accepts, lowercased. Module-level so the
+# API seam can refuse an unknown name against the same table this function dispatches
+# on: one list, not a copy that drifts. `square` and `rectangle` are aliases.
+HARMONY_SCHEMES: dict[str, HarmonyType] = {
+    "complementary": HarmonyType.COMPLEMENTARY,
+    "triadic": HarmonyType.TRIADIC,
+    "analogous": HarmonyType.ANALOGOUS,
+    "split-complementary": HarmonyType.SPLIT_COMPLEMENTARY,
+    "split complementary": HarmonyType.SPLIT_COMPLEMENTARY,
+    "tetradic": HarmonyType.TETRADIC,
+    "square": HarmonyType.TETRADIC,
+    "compound": HarmonyType.COMPOUND,
+    "rectangle": HarmonyType.COMPOUND,
+    "monochromatic": HarmonyType.MONOCHROMATIC,
+}
+
+
 # Convenience function for external use
-def generate_harmony(base_color: tuple[int, int, int], 
+def generate_harmony(base_color: tuple[int, int, int],
                      harmony_name: str) -> list[tuple[int, int, int]]:
     """
     Generate harmony by name string.
-    
+
     Args:
         base_color: RGB tuple
         harmony_name: Name of harmony type (case-insensitive)
-        
+
     Returns:
         List of RGB color tuples
+
+    An unknown name falls back to [base_color]. That fallback is the desktop
+    GUI's contract (a combo box can never send an unknown name) and is kept for
+    it; the server does NOT rely on it -- api.generate_harmony refuses an
+    unknown scheme by name before this is reached, because a one-colour
+    "harmony" returned for a typo is a guess wearing the shape of an answer.
     """
-    # Convert string to enum
-    harmony_map = {
-        "complementary": HarmonyType.COMPLEMENTARY,
-        "triadic": HarmonyType.TRIADIC,
-        "analogous": HarmonyType.ANALOGOUS,
-        "split-complementary": HarmonyType.SPLIT_COMPLEMENTARY,
-        "split complementary": HarmonyType.SPLIT_COMPLEMENTARY,
-        "tetradic": HarmonyType.TETRADIC,
-        "square": HarmonyType.TETRADIC,
-        "compound": HarmonyType.COMPOUND,
-        "rectangle": HarmonyType.COMPOUND,
-        "monochromatic": HarmonyType.MONOCHROMATIC,
-    }
-    
-    harmony_type = harmony_map.get(harmony_name.lower())
+    harmony_type = HARMONY_SCHEMES.get(harmony_name.lower())
     if not harmony_type:
         return [base_color]
-    
+
     return ColorHarmony.generate_harmony(base_color, harmony_type)

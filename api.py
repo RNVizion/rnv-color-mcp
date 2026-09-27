@@ -16,8 +16,8 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from engine.color_math import ColorMath
-from engine.color_harmony import generate_harmony as _harmony_by_name
-from engine.text_transform import TextTransformer
+from engine.color_harmony import HARMONY_SCHEMES, generate_harmony as _harmony_by_name
+from engine.text_transform import TextTransformer, TransformMode
 from engine.palette_store import PaletteStore
 from engine.resolve import resolve_color
 
@@ -145,9 +145,20 @@ def place_lightness(color: str, lightness: list[float]) -> dict[str, Any]:
 def generate_harmony(base: str, scheme: str) -> list[str]:
     """Generate a color harmony from a base hex color. scheme is one of
     complementary | analogous | triadic | split-complementary |
-    tetradic/square | monochromatic | compound."""
+    tetradic/square | monochromatic | compound.
+
+    An unknown scheme is refused here, by name, against the table the engine
+    dispatches on. The engine's own by-name entry point returns [base] for a
+    name it does not know -- a one-colour "harmony" for a typo, indistinguishable
+    from a real answer downstream. That is the guess the resolver refuses for
+    colours, and the same rule applies to the scheme. (Selector checks live at
+    this seam, beside mix_colors' mode check and convert_color's `to` check.)
+    """
+    key = scheme.strip().lower()
+    if key not in HARMONY_SCHEMES:
+        raise ValueError(f"Unknown scheme '{scheme}'. Choose from {sorted(HARMONY_SCHEMES)}.")
     rgb = ColorMath.hex_to_rgb(resolve_color(base, _store))
-    result = _harmony_by_name(rgb, scheme)
+    result = _harmony_by_name(rgb, key)
     return [ColorMath.rgb_to_hex(c) for c in result]
 
 
@@ -231,9 +242,32 @@ def contrast_check(foreground: str, background: str) -> dict[str, Any]:
 
 
 # ---- text ---------------------------------------------------------------
+# The eleven operations, keyed two ways: by their exact spelling, and by their
+# case-folded spelling. The folded keys are unique (a test pins that), so folding
+# case on the selector is resolution, not guessing: "uppercase" can only mean
+# UPPERCASE. Whitespace and underscore normalization is deliberately NOT done
+# here -- it is parked with alias normalization in the Runbook, and "snake case"
+# refuses today with the list that shows the spelling.
+_TEXT_OPERATIONS: dict[str, TransformMode] = {m.value: m for m in TransformMode}
+_TEXT_OPERATIONS_FOLDED: dict[str, TransformMode] = {m.value.lower(): m for m in TransformMode}
+
+
 def transform_text(text: str, operation: str) -> dict[str, str]:
-    """Apply an exact text transformation (case conversions, etc.)."""
-    return {"result": TextTransformer.transform_text(text, operation)}
+    """Apply an exact text transformation (case conversions, etc.).
+
+    An unknown operation is refused here, by name. The engine's dispatcher
+    returns the text UNCHANGED for a mode it does not know -- which arrives as
+    a `result` that reads like success and is not. That is the guess the
+    resolver refuses for colours, and the same rule applies to the operation.
+    """
+    mode = _TEXT_OPERATIONS.get(operation)
+    if mode is None:
+        mode = _TEXT_OPERATIONS_FOLDED.get(operation.strip().lower())
+    if mode is None:
+        raise ValueError(
+            f"Unknown operation '{operation}'. Choose from {[m.value for m in TransformMode]}."
+        )
+    return {"result": TextTransformer.transform_text(text, mode)}
 
 
 # ---- palette store ------------------------------------------------------
