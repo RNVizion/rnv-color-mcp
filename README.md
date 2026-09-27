@@ -38,6 +38,7 @@ owns the precise values. The server resolves or it refuses; it never guesses a c
 |---|---|
 | `mix_colors` | Blend up to 12 colors. Modes: `rgb`, `hsv`, `lab` (digital) and `paint` (Kubelka-Munk pigment physics), `ryb` (artist's wheel), `cmy` (subtractive). |
 | `convert_color` | Convert between hex, rgb, hsv, hsl, lab. |
+| `place_lightness` | Hold a color's hue and chroma; set its lightness. One hue at two L\* values is a light/dark pair. Refuses out-of-gamut rather than clamping, and reports the 8-bit quantization error. |
 | `generate_harmony` | complementary, analogous, triadic, split-complementary, tetradic/square, monochromatic, compound. |
 | `color_difference` | Perceptual difference (Delta-E, CIEDE2000 or CIE76) between two colors. |
 | `contrast_check` | WCAG contrast ratio plus AA/AAA pass/fail for accessible text. |
@@ -46,8 +47,8 @@ owns the precise values. The server resolves or it refuses; it never guesses a c
 
 Every color input accepts a **hex** (`#d2bc93`), a **CSS name** (`red`), an **RNV brand name**
 (`brand gold`, `near-black`), or a **saved-palette reference** (`Spring line`, or `Spring line:2`
-for its second swatch). Brand names win over CSS names on collision; `css:gold` forces the
-universal one.
+for its second swatch). Brand names win over CSS names on collision (`gold`, `blue`, `teal`);
+`css:blue` forces the universal one.
 
 ## Connect in 30 seconds
 
@@ -66,7 +67,7 @@ Once connected, just talk:
 
 > "Save a palette named *Spring line*: near-black and brand gold."
 > "Pull my Spring line palette and give me three complementary accents for outerwear."
-> "Mix paint-red and paint-blue like real pigment."
+> "Mix crimson and royalblue like real pigment."
 
 The first call saves; the second composes `get_palette` → `generate_harmony`; the third runs the
 Kubelka-Munk paint model, so the blend darkens the way mixed pigment actually does, not the way
@@ -80,16 +81,18 @@ public endpoint runs with it disabled, so connecting by URL works with no setup.
 When enabled (`RNV_AUTH=1` plus a key source), the server validates bearer tokens against issuer,
 audience, expiry, and signature; serves [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728)
 protected resource metadata at `/.well-known/oauth-protected-resource/mcp`; returns a
-spec-compliant `WWW-Authenticate` challenge on 401; and enforces two scopes: `read` covers the
-eight read-only tools, `write` covers `save_palette`, the only tool that mutates anything. A token
+spec-compliant `WWW-Authenticate` challenge on 401; and enforces two scopes: `read` covers every
+read-only tool, `write` covers `save_palette`, the only tool that mutates anything. A token
 without the `write` scope does not see `save_palette` in its tool list at all; out-of-scope tools
 are hidden rather than refused, so nothing leaks about what exists behind a scope you lack.
 
 Enforcement is covered by the test suite, run in CI on every push (status badge at the top of
 this file), spanning the token-validation matrix (missing, malformed, wrong issuer, wrong
 audience, expired, valid) and end-to-end scope enforcement over real HTTP. The suite mints its
-own keys and requires no credentials. The tests cover the auth layer; the color engine itself is
-not under automated test.
+own keys and requires no credentials. Beyond auth, it pins parts of the engine: the brand
+vocabulary mirror; the contrast, difference and placement contract; selector and input refusals;
+the palette write path; store durability. Mix, harmony, conversion and text outputs are exercised
+by the smoke scripts and are not yet under regression test.
 
 Moving from the self-issued development key to a real identity provider is configuration, not
 code: point `RNV_AUTH_JWKS_URI` at the provider's JWKS endpoint and set the issuer and audience
@@ -114,11 +117,13 @@ pip install -r requirements.txt
 python server.py                  # Streamable HTTP on $PORT (default 7860)
 
 pip install -r tests/requirements-dev.txt
-python -m pytest                  # auth + scope tests
-python tests/server_test.py       # smoke: exercises all 9 tools in-process
+python -m pytest                  # the suite; needs no credentials
+python tests/server_test.py       # smoke: exercises every tool in-process
 ```
 
 Set `HF_TOKEN` to write palettes through to a private Hugging Face Dataset for durable storage.
+The suite and both smoke scripts ignore `HF_TOKEN` and use a throwaway store, so they can never
+write to a real Dataset.
 
 ## Running a copy?
 
@@ -127,8 +132,9 @@ didn't. What a licence can't carry is the environment.
 
 Some capabilities depend on how a deployment is configured, not on the code alone:
 
-- **Palette persistence** needs `HF_TOKEN` and a writable Dataset. Without it, saves land in
-  process memory and vanish with the container.
+- **Palette persistence** needs `HF_TOKEN` and a writable Dataset. Without it, saves land in the
+  container's local working copy and vanish with it; `save_palette` returns `durable: false` with
+  a `durable_reason` naming the step that stopped it.
 - **Scoped authorization** needs `RNV_AUTH` and a configured issuer. Unset, the server runs open —
   which is correct for a public demo and wrong for anything else.
 - **Anything that fetches** needs outbound network access.
@@ -156,8 +162,10 @@ under it was checked first.
   detected against it. It is carried locally on purpose: `resolve_color` is the hot path, and a
   fetch there would have to answer what happens when it fails — fail closed and the server
   refuses every color, fall back and the local copy is needed anyway, guess and the promise
-  above is already broken. Identifiers are local by design; the check compares values, never
-  names. The register and its reasoning live in `BRAND_COLORS.md`, in `rnv-brand`.
+  above is already broken. Identifiers match upstream's since the register retired local names
+  on 2026-08-17; the check compares values. A scheduled job compares the mirror with upstream
+  daily and gates nothing. The register and its reasoning live in `BRAND_COLORS.md`, in
+  `rnv-brand`.
 - **Engine is dependency-free.** The color math, harmony, and text logic are pure standard
   library, lifted Qt-free from the desktop apps. Only the server layer needs `fastmcp`.
 - **Honest by design.** An unknown color name is refused, not guessed. An unverifiable token is

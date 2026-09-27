@@ -1,12 +1,20 @@
 """
 RNV Color MCP - API surface
 
-The seven locked tools, shaped as plain functions. This is the seam: Phase 2 wraps each
-of these with @mcp.tool and a description; nothing else about the engine changes.
+The tools, shaped as plain functions. This is the seam: server.py registers each one with a
+model-facing description; nothing else about the engine changes.
 
-Color engine : mix_colors, convert_color, generate_harmony
+Color engine : mix_colors, convert_color, place_lightness, generate_harmony,
+               color_difference, contrast_check
 Text         : transform_text
 Palette store: save_palette, list_palettes, get_palette
+
+Input and selector checks live here, at the seam, not in the engine: mix_colors' mode and
+color count, convert_color's `to`, generate_harmony's scheme, transform_text's operation,
+save_palette's name and colors. The engine keeps the desktop apps' lenient defaults (an
+unknown scheme returns the base, an unknown operation returns the text); the server never
+relies on them. tests/test_public_surfaces.py holds this listing and __all__ equal to the
+registered tools, so neither can fall behind the server again.
 """
 from __future__ import annotations
 
@@ -388,6 +396,7 @@ def get_palette(name: str) -> dict[str, Any] | None:
 
 
 __all__ = [
-    "mix_colors", "convert_color", "generate_harmony", "transform_text",
+    "mix_colors", "convert_color", "place_lightness", "generate_harmony",
+    "color_difference", "contrast_check", "transform_text",
     "save_palette", "list_palettes", "get_palette",
 ]

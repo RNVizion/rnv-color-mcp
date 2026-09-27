@@ -31,8 +31,10 @@ import api
 # challenge on 401. Moving to a real provider (Auth0, etc.) later is config here,
 # not code: set RNV_AUTH_JWKS_URI + RNV_AUTH_ISSUER + RNV_AUTH_AUDIENCE.
 #
-# Two scopes: `read` for the eight read-only tools, `write` for save_palette, the
-# only tool that mutates the store.
+# Two scopes: `read` for every read-only tool, `write` for save_palette, the only
+# tool that mutates the store. (Counts are not spelled here: this comment said
+# "eight" for two weeks after the ninth read tool landed. test_scopes.py holds
+# the set.)
 RNV_SCOPES = ["read", "write"]
 
 
@@ -97,9 +99,13 @@ mcp = FastMCP(
     name="rnv-color",
     instructions=(
         "Color workflow for RNVizion: mix colors (digital and physical/paint models), "
-        "convert formats, generate harmonies, transform text case, and remember named "
-        "palettes. Color inputs accept hex, CSS names, RNV brand names (brand gold, "
-        "near-black), or saved-palette references."
+        "convert formats, set a color's lightness while holding its hue, measure "
+        "difference and contrast, generate harmonies, transform text case, and remember "
+        "named palettes. Color inputs accept hex, CSS names, RNV brand names (brand gold, "
+        "near-black), or saved-palette references. RNV brand names win over CSS names on "
+        "collision (gold, blue, teal): 'blue' is RNV blue #6f94bc; write css:blue for "
+        "#0000ff. Unknown names, schemes and operations are refused with the valid "
+        "choices, never guessed."
     ),
     auth=_AUTH,
 )
@@ -141,6 +147,12 @@ mcp.tool(
         "new color. RNV's #00b0a0 was blended in paint; the same ingredients at the "
         "same weights in lab give #9cc1a5, 15.94 away and far closer to the brand "
         "gold it exists to be distinguishable from. "
+        "paint works per RGB channel, so an ingredient with an empty channel (pure digital "
+        "primaries such as #0000ff or #ffff00) dominates that channel: yellow + css:blue "
+        "comes out black in paint, where ryb gives green. For pigment-like results use "
+        "pigment-like colors, or ryb for idealized primaries. "
+        "Brand names win over CSS names on collision: 'blue' is RNV blue, css:blue is "
+        "#0000ff. "
         "Read-only and deterministic: it computes a result and stores nothing, so it is "
         "safe to call repeatedly with no side effects. "
         "Use to combine multiple colors into a single blend; to convert one color between "

@@ -612,11 +612,19 @@ class ColorMath:
         - Light absorption (K coefficient)
         - Light scattering (S coefficient)
         
-        This produces the most realistic paint mixing results:
-        - Yellow + Blue = Green (natural, not muddy)
-        - Colors darken when mixed (like real paint)
-        - Handles opacity and coverage naturally
-        
+        What it does well: colours darken when mixed, like real paint, and
+        pigment-like inputs blend plausibly (#fdd835 + #1e40af -> #315c4d, a dark
+        green; crimson + royalblue -> #5d2157).
+
+        What it does not do, measured 2026-09-27 and asserted in
+        tests/test_public_surfaces.py: this is a per-RGB-channel approximation, not
+        a spectral model. Reflectance is clamped to 0.001, so a channel at 0 gives
+        K/S of about 499 and dominates that channel of the mix. Pure digital
+        primaries therefore collapse: #ffff00 + #0000ff -> #000000 (not green),
+        red + yellow -> #fe0000, white + #0000ff -> #0000fe (white does not tint).
+        An earlier version of this docstring promised "Yellow + Blue = Green"; for
+        those inputs it was false. RYB mixing gives green for them (#007f00).
+
         Simplified implementation using reflectance model.
         
         Args:

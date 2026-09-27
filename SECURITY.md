@@ -50,7 +50,7 @@ version, and the impact as you see it.
 
 **In scope**
 
-- The MCP server and its nine tools, including input handling and the color-name resolver.
+- The MCP server and its tools, including input handling and the color-name resolver.
 - The OAuth 2.1 resource-server layer: token validation, audience and issuer binding, and per-tool
   scope enforcement when `RNV_AUTH` is set.
 - The RFC 9728 protected-resource metadata endpoint and the `WWW-Authenticate` challenge.
