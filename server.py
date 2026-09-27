@@ -249,8 +249,14 @@ mcp.tool(
     **_scoped("write"),
     description=(
         "Persist a named color palette for later retrieval with get_palette or list_palettes. "
-        "colors is a list of hex values; optional notes are stored as the palette's description. "
-        "Author is recorded as RNVizion. "
+        "Each entry in colors accepts what every other tool accepts: a hex (#d2bc93), a CSS "
+        "name (red), an RNV brand name (brand gold), or a saved-palette reference "
+        "('Spring line:2'); each is resolved and stored as normalized hex, and an unknown "
+        "token refuses the whole save naming its position. Optional notes are stored as the "
+        "palette's description. Author is recorded as RNVizion. "
+        "The name is refused, with the reason, if it is an RNV brand name, a CSS color name, "
+        "a 'css:' form, a hex literal, or contains ':' -- a palette resolves ahead of brand "
+        "and CSS names, so such a name would redefine a color for every caller. "
         "This WRITES to the palette store and is the only tool here that does. Reusing an "
         "existing name overwrites that palette: save and update are the same call (an upsert), "
         "there is no separate update operation. "

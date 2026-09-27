@@ -19,7 +19,7 @@ from engine.color_math import ColorMath
 from engine.color_harmony import HARMONY_SCHEMES, generate_harmony as _harmony_by_name
 from engine.text_transform import TextTransformer, TransformMode
 from engine.palette_store import PaletteStore
-from engine.resolve import resolve_color
+from engine.resolve import CSS_NAMES, RNV_BRAND, UnknownColor, normalize_hex, resolve_color
 
 # ---- mix mode -> ColorMath method ---------------------------------------
 _MIX_MODES = {
@@ -273,7 +273,7 @@ def transform_text(text: str, operation: str) -> dict[str, str]:
 # ---- palette store ------------------------------------------------------
 class SavePaletteResult(BaseModel):
     name: str = Field(description="Name the palette was stored under.")
-    colors: list[str] = Field(description="The hex colors saved, in order.")
+    colors: list[str] = Field(description="The hex colors saved, in order, normalized to '#rrggbb'.")
     notes: str = Field(description="Description stored on the palette; empty if none given.")
     color_count: int = Field(description="Number of colors in the saved palette.")
     overwritten: bool = Field(
@@ -284,12 +284,36 @@ class SavePaletteResult(BaseModel):
     )
 
 
+def _reserved_palette_name(name: str) -> str | None:
+    """Why a palette may not be stored under `name`, or None if it may.
+
+    Saved palettes resolve BEFORE brand and CSS names (engine/resolve.py), so a
+    palette named "brand gold" would redefine that name for every caller -- and
+    the public endpoint runs auth-off, so every caller can save. A name that is
+    a hex literal can never be referenced (the hex layer answers first), and ":"
+    is the swatch-index separator, so a name containing it cannot be referenced
+    either. Each refusal names its reason; the resolver's order is unchanged.
+    """
+    key = name.strip().lower()
+    if key in RNV_BRAND:
+        return f"{name!r} is an RNV brand name and cannot be a palette name."
+    if key in CSS_NAMES:
+        return f"{name!r} is a CSS color name and cannot be a palette name."
+    if key.startswith("css:"):
+        return f"{name!r} uses the 'css:' namespace, which forces a CSS color, so it cannot be a palette name."
+    if normalize_hex(key) is not None:
+        return f"{name!r} reads as a hex literal, so a palette by that name could never be referenced."
+    if ":" in key:
+        return f"{name!r} contains ':', the swatch-index separator ('Spring line:2'), so it could not be referenced."
+    return None
+
+
 def save_palette(
     name: Annotated[str, Field(
-        description="Unique key the palette is stored under. Reusing an existing name overwrites that palette (upsert). Can be referenced later by other tools as 'name:index', e.g. 'Spring line:2'."
+        description="Unique key the palette is stored under. Reusing an existing name overwrites that palette (upsert). Can be referenced later by other tools as 'name:index', e.g. 'Spring line:2'. Refused, with the reason, if it is an RNV brand name, a CSS color name, a 'css:' form, a hex literal, or contains ':'."
     )],
     colors: Annotated[list[str], Field(
-        description="Ordered list of hex colors, each '#RRGGBB' (e.g. '#d2bc93'). Order is preserved; at least one required."
+        description="Ordered list of colors. Each accepts what every other tool accepts: a hex ('#d2bc93'), a CSS name ('red'), an RNV brand name ('brand gold'), or a saved-palette reference ('Spring line:2'); each is resolved and stored as normalized '#rrggbb'. An unknown token refuses the whole save, naming the position. Order is preserved; at least one required."
     )],
     notes: Annotated[str, Field(
         description="Optional human-readable description stored as the palette's notes."
@@ -299,8 +323,16 @@ def save_palette(
 
     Use when the user wants to keep a set of colors under a name for reuse across sessions,
     such as a brand or launch palette. Idempotent upsert: a new name creates a palette, an
-    existing name replaces it. The saved name can then be referenced by convert_color and
-    generate_harmony as a palette reference. Author is recorded as RNVizion.
+    existing name replaces it. The saved name can then be referenced by mix_colors,
+    convert_color, generate_harmony and the other color tools as a palette reference.
+    Author is recorded as RNVizion.
+
+    Every color is resolved through the same resolver as the other tools and stored as
+    hex, so the store only ever holds what the resolver can serve. Until 2026-09-27 it
+    stored whatever it was handed; the live store held a swatch reading 'Purple', and the
+    first arithmetic on it failed with an int() error instead of a named refusal. The
+    resolution happens at save time, so a brand name saved today is a snapshot of today's
+    value -- which is what a saved palette is for.
 
     The returned `durable` flag reports whether the save reached durable storage (the HF
     Dataset) or only the local working copy; a False here means the palette will not survive
@@ -308,13 +340,22 @@ def save_palette(
     """
     if not colors:
         raise ValueError("Provide at least one color to save.")
+    reason = _reserved_palette_name(name)
+    if reason is not None:
+        raise ValueError(reason)
+    resolved: list[str] = []
+    for i, token in enumerate(colors, start=1):
+        try:
+            resolved.append(resolve_color(token, _store))
+        except UnknownColor as exc:
+            raise ValueError(f"colors[{i}] {token!r}: {exc}") from exc
     existed = _store.get_palette(name) is not None
-    result = _store.save_palette(name, colors, notes)
+    result = _store.save_palette(name, resolved, notes)
     return SavePaletteResult(
         name=name,
-        colors=colors,
+        colors=resolved,
         notes=notes,
-        color_count=len(colors),
+        color_count=len(resolved),
         overwritten=existed,
         durable=bool(result.get("durable", False)),
     )

@@ -16,6 +16,13 @@ Resolution order (most specific wins):
 
 Precedence note: the RNV layer is checked before CSS, so "gold" resolves to RNV brand gold
 (#d2bc93), not CSS gold (#ffd700). Use "css:gold" to force the universal one.
+
+Shadowing note: saved palettes sit ABOVE the brand layer, so a palette named "brand gold"
+would redefine that name for every caller -- and the public endpoint runs auth-off, so
+every caller can save. The write path (api.save_palette) therefore refuses a palette name
+that is a brand key, a CSS name, a "css:" form, a hex literal, or contains ":" (the swatch
+separator). The order here is unchanged; the collision is made impossible at the only
+place it could be created.
 """
 from __future__ import annotations
 
@@ -189,7 +196,13 @@ class UnknownColor(ValueError):
     """Raised when a token resolves to no known color. The server refuses rather than guess."""
 
 
-def _normalize_hex(token: str) -> str | None:
+def normalize_hex(token: str) -> str | None:
+    """'#D2BC93', 'd2bc93', '#fff' -> '#d2bc93' / '#ffffff'; anything else -> None.
+
+    Public because the palette store normalizes through it on the write path:
+    the one rule for what a hex literal is lives here, and a swatch is stored in
+    the form this resolver returns.
+    """
     m = _HEX_RE.match(token.strip())
     if not m:
         return None
@@ -200,7 +213,19 @@ def _normalize_hex(token: str) -> str | None:
 
 
 def _from_palette(token: str, store) -> str | None:
-    """Resolve 'Name' (primary swatch) or 'Name:N' (Nth swatch, 1-based) from the store."""
+    """Resolve 'Name' (primary swatch) or 'Name:N' (Nth swatch, 1-based) from the store.
+
+    A stored swatch is served only if it is a hex literal. The store has
+    normalized every colour it accepts since 2026-09-27; before that it stored
+    whatever it was handed, and the live store held a palette whose second
+    swatch was the string 'Purple'. Resolving it returned that string as if it
+    were hex, and the first arithmetic on it failed with
+    `invalid literal for int() with base 16: 'Pu'` -- no reason, no location.
+    A malformed swatch is now refused by palette, position and value, which is
+    the second gate: say why and where. It is not resolved as a CSS name on the
+    way out, because a store that holds a non-hex swatch is wrong and a lenient
+    read would hide that forever.
+    """
     if store is None:
         return None
     name, _, idx = token.partition(":")
@@ -213,10 +238,19 @@ def _from_palette(token: str, store) -> str | None:
             i = int(idx) - 1
         except ValueError:
             return None
-        if 0 <= i < len(colors):
-            return colors[i]
-        return None
-    return colors[0]
+        if not 0 <= i < len(colors):
+            return None
+    else:
+        i = 0
+    swatch = colors[i]
+    hexed = normalize_hex(str(swatch))
+    if hexed is None:
+        raise UnknownColor(
+            f"Palette {name.strip()!r} swatch {i + 1} holds {swatch!r}, which is not a "
+            f"hex color. Re-save the palette with save_palette; every color is "
+            f"resolved and stored as hex on the way in."
+        )
+    return hexed
 
 
 def resolve_color(token: str, store=None) -> str:
@@ -233,7 +267,7 @@ def resolve_color(token: str, store=None) -> str:
             return CSS_NAMES[name]
         raise UnknownColor(f"Unknown CSS color: {name!r}")
 
-    hexed = _normalize_hex(raw)
+    hexed = normalize_hex(raw)
     if hexed:
         return hexed
 
@@ -253,4 +287,4 @@ def resolve_color(token: str, store=None) -> str:
     )
 
 
-__all__ = ["resolve_color", "UnknownColor", "RNV_BRAND", "CSS_NAMES"]
+__all__ = ["resolve_color", "normalize_hex", "UnknownColor", "RNV_BRAND", "CSS_NAMES"]
