@@ -1,0 +1,32 @@
+# Dependabot: SECURITY UPDATES ONLY.
+#
+# Security updates are switched on in the repository's settings (Settings ->
+# Code security: Dependabot alerts, then Dependabot security updates), not by
+# this file. What this file does:
+#
+#   - open-pull-requests-limit: 0 keeps VERSION updates off. It is GitHub's
+#     documented way to take security updates without version updates, and it
+#     does not limit security pull requests.
+#   - groups / applies-to: security-updates: fixes that arrive together come as
+#     one pull request. Every merge to main deploys (sync-hf.yml), so one pull
+#     request is one deploy.
+#
+# The pip entry reads requirements.txt, a pip-compile lock with hashes built
+# from requirements.in; Dependabot regenerates it with pip-compile. Each pull
+# request runs the suite on both interpreters before it can be merged, and the
+# deploy gate runs it again. Merging one is a production change, never a
+# formality.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "deps(security)"
