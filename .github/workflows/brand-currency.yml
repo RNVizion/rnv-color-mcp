@@ -55,3 +55,26 @@ jobs:
       # guarding is not a guard, and this one reads a remote file.
       - name: Compare key sets against upstream HEAD
         run: python scripts/check_brand_currency.py --mode currency
+
+      # GitHub disables a scheduled workflow in a public repository after 60
+      # days with no repository activity, and does it silently: the warning
+      # above would stop exactly when this repository is quietest, which is
+      # when upstream drift goes longest unseen. This step is the fuse's own
+      # warning. From day 45 it fails every morning, and a failed scheduled run
+      # notifies the workflow's creator (or whoever last changed its cron).
+      # Any push to main resets the count; if the schedule has already
+      # stopped, re-enable it from the Actions tab. The last commit on main is
+      # the measure because a commit is certainly activity; GitHub does not
+      # define the term, so this can only warn early, never late.
+      - name: Schedule is clear of GitHub's 60-day inactivity fuse
+        if: always()
+        env:
+          WARN_AFTER_DAYS: "45"
+        run: |
+          last=$(git log -1 --format=%ct)
+          days=$(( ( $(date +%s) - last ) / 86400 ))
+          echo "last commit on main: $(git log -1 --format='%h %cI'), ${days} days ago"
+          if [ "$days" -ge "$WARN_AFTER_DAYS" ]; then
+            echo "::error title=Schedule fuse::No commit on main for ${days} days. GitHub disables this scheduled workflow after 60 days without repository activity, without notice. Push any change to main to reset the count; if the schedule has already stopped, re-enable it from the Actions tab."
+            exit 1
+          fi
