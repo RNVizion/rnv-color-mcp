@@ -57,5 +57,26 @@ jobs:
         with:
           python-version: "3.13"
 
+      # Exit 2 means the comparison never ran: upstream was unreachable. That
+      # is someone else's outage, not a mirror that lies about its pin, so it
+      # warns and passes, exactly as the deploy gate in sync-hf.yml does. Until
+      # 2026-09-29 this job failed on 2 as well, so an upstream incident turned
+      # this status check red over a defect this repository did not have.
       - name: Compare mirror against upstream at SYNCED_SHA
-        run: python scripts/check_brand_currency.py --mode transcription
+        run: |
+          set +e
+          python scripts/check_brand_currency.py --mode transcription
+          code=$?
+          set -e
+          case $code in
+            0)
+              echo "mirror verified against its pinned commit"
+              ;;
+            2)
+              echo "::warning title=Mirror not verified::Upstream was unreachable, so the mirror could not be checked against its pin. This is an outage, not a mismatch."
+              ;;
+            *)
+              echo "::error title=Mirror does not match its pin::engine/brand_vocab.py does not carry the commit its docstring claims. Fix the mirror or the pin."
+              exit 1
+              ;;
+          esac
