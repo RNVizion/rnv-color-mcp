@@ -1,0 +1,33 @@
+# The runtime dependencies, as ranges. EDIT THIS FILE, not requirements.txt.
+#
+# requirements.txt is generated from this file by pip-compile and pins every
+# package, transitive ones included, with hashes. CI, the Hugging Face Space
+# (Dockerfile), a Factory rebuild and the Glama release all install that file,
+# so each of them runs the exact set the suite was proven on. Before the lock
+# (decided 2026-09-29) every rebuild re-resolved these ranges against whatever
+# PyPI served that day, and the test gate certified an environment production
+# did not necessarily get.
+#
+# Regenerate after editing this file, on Python 3.13 (the Space's image), with
+# the pip-tools that Dependabot runs:
+#
+#   pip install "pip-tools==7.5.3" "click<8.2"
+#   pip-compile --generate-hashes --strip-extras --output-file requirements.txt requirements.in
+#
+# click<8.2 is not optional: with a newer click, pip-tools 7.5.3 writes a
+# spurious --no-index into the command recorded in the lock's header, and that
+# command then fails when it is re-run. Add --upgrade to move every pin to the
+# newest versions these ranges allow; that is a deliberate refresh, delivered
+# and tested like any other change. Dependabot (security updates only; see
+# .github/dependabot.yml) regenerates the lock when a pinned package has an
+# advisory.
+#
+# Engine, store, and resolver are standard-library only.
+fastmcp>=3.4,<4
+huggingface_hub>=1.0,<2
+
+# Imported directly (pydantic in api.py and server.py, starlette in server.py),
+# so declared rather than left to arrive through fastmcp: a refresh that
+# dropped either would break an import.
+pydantic>=2,<3
+starlette>=1,<2
