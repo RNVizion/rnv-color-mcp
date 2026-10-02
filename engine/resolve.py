@@ -225,32 +225,61 @@ def _from_palette(token: str, store) -> str | None:
     the second gate: say why and where. It is not resolved as a CSS name on the
     way out, because a store that holds a non-hex swatch is wrong and a lenient
     read would hide that forever.
+
+    The same holds for a swatch the palette does not have (2026-09-30). When the
+    palette exists, a missing or non-numeric swatch is refused with the palette,
+    its swatch count and the valid range: a swatch number is a selector, and
+    every selector here refuses with its valid choices. Before, it fell through
+    to the brand and CSS layers and came back as "Don't know the color
+    'Spring line:5'", which never said the palette was there. Refusing here
+    shadows nothing: no brand or CSS name contains ":" (tests/test_resolve.py
+    holds that).
     """
     if store is None:
         return None
     name, _, idx = token.partition(":")
-    pal = store.get_palette(name.strip())
-    if not pal or not pal.get("colors"):
+    name = name.strip()
+    pal = store.get_palette(name)
+    if not pal:
         return None
-    colors = pal["colors"]
+    colors = pal.get("colors") or []
+    n = len(colors)
+    if n == 0:
+        raise UnknownColor(
+            f"{token!r}: palette {name!r} has no swatches. Re-save it with at least one color."
+        )
     if idx.strip():
         try:
-            i = int(idx) - 1
+            k = int(idx)
         except ValueError:
-            return None
-        if not 0 <= i < len(colors):
-            return None
+            raise UnknownColor(
+                f"{token!r}: {idx.strip()!r} is not a swatch number. "
+                f"{_swatch_range(name, n)}"
+            ) from None
+        if not 1 <= k <= n:
+            raise UnknownColor(
+                f"{token!r} names swatch {k}, which does not exist. {_swatch_range(name, n)}"
+            )
+        i = k - 1
     else:
         i = 0
     swatch = colors[i]
     hexed = normalize_hex(str(swatch))
     if hexed is None:
         raise UnknownColor(
-            f"Palette {name.strip()!r} swatch {i + 1} holds {swatch!r}, which is not a "
+            f"Palette {name!r} swatch {i + 1} holds {swatch!r}, which is not a "
             f"hex color. Re-save the palette with save_palette; every color is "
             f"resolved and stored as hex on the way in."
         )
     return hexed
+
+
+def _swatch_range(name: str, n: int) -> str:
+    """The valid references to a palette of n swatches, for a refusal."""
+    first, last = f"{name}:1", f"{name}:{n}"
+    if n == 1:
+        return f"Palette {name!r} has 1 swatch: {first!r}."
+    return f"Palette {name!r} has {n} swatches: {first!r} through {last!r}."
 
 
 def resolve_color(token: str, store=None) -> str:
