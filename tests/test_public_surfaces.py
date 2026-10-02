@@ -35,10 +35,17 @@ What this file cannot see, and who can:
   - the Claude connector's cached tool list, Glama's copy, and the registry
     entry, which refresh on reconnect, rescan, and the next tagged publish;
   - the brand surfaces outside this repository that describe or count the
-    tool set: the rnvizion.dev homepage, /resume/, the maintained resume
-    files, and Brand Book section 5. A change to the tool set reaches them
-    only through a same-session note to the Architect chat (Build Runbook,
-    Locked scope);
+    tool set: the rnvizion.dev homepage, /resume/, /bio/, the maintained
+    resume files, and Brand Book section 5. A change to the tool set reaches
+    them through a same-session note to the Architect chat (Build Runbook,
+    Locked scope), which carries the reason and the release shape. Since
+    2026-09-30 a second route exists: rnv-brand's drift check
+    (profile.json, facts.color_mcp_tools) parses this repository's server.py
+    and fails by name when the count or the set moves, for the homepage,
+    /resume/ and /bio/. It runs on rnv-brand's schedule, not on a push here,
+    and does not read the resume files or the Brand Book, so the note stays
+    first. (Until 2026-09-30 this line listed four surfaces and said "only";
+    /bio/ was missed upstream and inherited here.);
   - who links INTO this README. EXTERNAL_ANCHORS lists the anchors known to be
     linked from outside; a heading renamed from under one of them fails here,
     but a new external link is unknown until it is added to that table.
@@ -76,7 +83,13 @@ _COUNT = re.compile(
 
 
 def registered_tools(source: str) -> set[str]:
-    """Names passed as `api.<name>` to `mcp.tool(...)` calls in server.py."""
+    """Names passed as `api.<name>` to `mcp.tool(...)` calls in server.py.
+
+    This call form is read outside this repository too: rnv-brand's
+    verify_tool_sets parses server.py the same way (since 2026-09-30). A new
+    registration style fails here first, through the positive control; tell
+    Brand Infrastructure in the same session, because theirs fails too.
+    """
     found: set[str] = set()
     for node in ast.walk(ast.parse(source)):
         if (isinstance(node, ast.Call)
