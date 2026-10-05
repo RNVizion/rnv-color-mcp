@@ -9,8 +9,8 @@ Color engine : mix_colors, convert_color, place_lightness, generate_harmony,
 Text         : transform_text
 Palette store: save_palette, list_palettes, get_palette
 
-Input and selector checks live here, at the seam, not in the engine: mix_colors' mode and
-color count, convert_color's `to`, generate_harmony's scheme, transform_text's operation,
+Input and selector checks live here, at the seam, not in the engine: mix_colors' mode,
+color count and weights, convert_color's `to`, generate_harmony's scheme, transform_text's operation,
 save_palette's name and colors. The engine keeps the desktop apps' lenient defaults (an
 unknown scheme returns the base, an unknown operation returns the text); the server never
 relies on them. tests/test_public_surfaces.py holds this listing and __all__ equal to the
@@ -71,7 +71,30 @@ def mix_colors(
     if weights is None:
         weights = [1] * len(colors)
     if len(weights) != len(colors):
-        raise ValueError("weights must match the number of colors.")
+        raise ValueError(
+            f"weights must match the number of colors. Colors: {len(colors)}. "
+            f"Weights: {len(weights)}."
+        )
+    # Refused here since 2026-10-05. Until then the engine dropped any weight that was
+    # not above zero, so [-1, 2] returned the second color alone, as a computed mix,
+    # and nothing said the first had been left out. Zero still leaves a color out; that
+    # is a choice a caller can make. A negative weight asks for something mixing cannot
+    # do, and guessing what was meant is the one thing this server does not do.
+    for position, weight in enumerate(weights, start=1):
+        if isinstance(weight, bool) or not isinstance(weight, int):
+            raise ValueError(
+                f"Weight {position} is {weight!r}. Weights are whole numbers, 0 or more."
+            )
+        if weight < 0:
+            raise ValueError(
+                f"Weight {position} is {weight}. A weight cannot be negative: mixing adds "
+                f"colors and cannot take one out. Use 0 to leave a color out."
+            )
+    if not any(weights):
+        raise ValueError(
+            "Every weight is 0, so there is nothing to mix. Give at least one color a "
+            "weight above 0."
+        )
 
     rgb_list = [ColorMath.hex_to_rgb(resolve_color(c, _store)) for c in colors]
     colors_weights = list(zip(rgb_list, weights))
