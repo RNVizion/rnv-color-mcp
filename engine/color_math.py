@@ -400,66 +400,130 @@ class ColorMath:
         
         return ColorMath.lab_to_rgb((avg_L, avg_a, avg_b))
     
+    #: What subtractive_cmy_mix reads a channel stored as 0 as, as a reflectance:
+    #: half an 8-bit step divided by e, about 0.184 of a step. log has no value
+    #: for 0, so the model needs a stand-in, and a rounded 0 stands for anything
+    #: below half a step. This is the model's own answer for that range: mix
+    #: everything in it in equal parts, and the weighted geometric mean is half a
+    #: step over e. The smaller the stand-in, the less any amount of another color
+    #: can lift a 0: with the smallest positive float in its place, white +
+    #: #0000ff is still #0000ff at 99:1.
+    #:
+    #: It also keeps the model off the exact middle between two steps, where the
+    #: last bit of exp and log would choose the rounding. With a 0 in the mix it
+    #: cannot land there, because e is transcendental. With no 0, the mix raised
+    #: to its total weight is a whole number, and a half step raised to it is
+    #: not. Two plainer stand-ins fail this: a quarter of a step puts black +
+    #: #090909 at exactly 1.5, and the 0.001 that paint clamps at puts cyan +
+    #: magenta + yellow at exactly 25.5.
+    #:
+    #: A float only approximates the model, so what protects a result is its
+    #: distance from a half. Measured on 2026-10-05 (US Eastern): on every mix
+    #: checked, the float computed here was within 1e-13 of a step of the true
+    #: value. The largest error seen was 6.4e-14, for grey 147 at weight 58 with
+    #: grey 217 at weight 1. On that evidence a mix further than 1e-13 from a
+    #: half rounds as exact arithmetic does: six greys in equal parts, 8.2e-13
+    #: short of 79.5, come out 79. Nearer than that, the float's own error
+    #: decides. Nine greys in equal parts are 1.6e-14 short of 105.5; the float
+    #: comes out at 105.5 exactly, and the engine returns 106 where exact
+    #: arithmetic gives 105. Both mixes are in tests/test_mix_outputs.py, the
+    #: second as a limitation. The result is always one of the two steps the
+    #: true value lies between.
+    CMY_ZERO_REFLECTANCE = 0.5 / math.e / 255.0
+
     @staticmethod
     def subtractive_cmy_mix(colors_weights: list[ColorWeight]) -> RGB | None:
         """
-        Mix colors using subtractive CMY model (like inks/dyes).
-        
-        Subtractive mixing simulates how pigments absorb light:
-        - Yellow + Cyan = Green
-        - Yellow + Magenta = Red  
-        - Cyan + Magenta = Blue
-        - All colors = Black
-        
+        Mix colors subtractively, the way transparent inks do: each ingredient
+        takes light away in each RGB channel.
+
+        Each channel is read as a reflectance, and the mix is the weighted
+        geometric mean of that channel: every reflectance raised to its share of
+        the weight, multiplied together. In logs, that is each ingredient's
+        density (minus the log of its reflectance) added in proportion to its
+        weight, which is what ideal transparent inks do when each is thinned
+        by the others.
+
+        The formula is the one Scott Allen Burns applies to whole reflectance
+        curves as a model of how paints mix ("Subtractive Color Mixture
+        Computation", arXiv:1710.06364). That paper also says three RGB numbers
+        are too few for it, and the limit shows here. A channel at 0 is a very
+        dark ink: in equal parts it dominates its channel, and it gives way to
+        weight.
+
+        Measured 2026-10-05 (US Eastern). Each mix below is computed and
+        compared in tests/test_mix_outputs.py:
+        - yellow + cyan -> #07ff07, a green
+        - yellow + magenta -> #ff0707, a red
+        - cyan + magenta -> #0707ff, a blue
+        - cyan + magenta + yellow -> #171717, a near-black. Equal parts thin
+          each ink to a third of its strength, so the three stop short of black.
+        - black + white -> #070707
+        - red + yellow -> #ff0700, a red and not an orange
+        - yellow + #0000ff -> #070707, a near-black and not a green
+        - white is no ink, so adding it only lightens:
+          white + #0000ff at 1:1 -> #0707ff
+          white + #0000ff at 3:1 -> #2a2aff
+          white + #0000ff at 9:1 -> #7c7cff
+          white + #0000ff at 99:1 -> #ededff
+
+        Held by a test each:
+        - a color mixed alone comes back unchanged, for every 8-bit value;
+        - the order of the colors and the scale of the weights change nothing;
+        - no channel comes out outside the range of its ingredients;
+        - no channel comes out lighter than the plain average of that channel,
+          rounded to the nearest step. In the model that is certain: a
+          geometric mean never exceeds the arithmetic one, and reading a 0 as
+          the stand-in lifts a mix above the average only where both round to
+          0. The engine is held to it on a sample.
+
+        The float is rounded to the nearest step. In the model no mix is
+        exactly halfway between two steps, but a float can sit there: see
+        CMY_ZERO_REFLECTANCE.
+
+        Before it was rewritten on 2026-10-05 this function averaged in CMY,
+        which is the same arithmetic as averaging in RGB, under a docstring that
+        promised "All colors = Black". cyan + magenta + yellow returned #aaaaaa.
+        The RNV desktop apps keep their own copy of that version, and this
+        change does not reach them.
+
         Args:
             colors_weights: List of (color, weight) tuples where color is (r, g, b)
-            
+
         Returns:
             Mixed color as RGB tuple, or None if no valid colors
         """
         if not colors_weights:
             return None
-        
+
         # Filter out zero weights
         weighted = [(color, weight) for color, weight in colors_weights if weight > 0]
         if not weighted:
             return None
-        
+
         total_weight = sum(weight for _, weight in weighted)
         if total_weight == 0:
             return None
-        
-        # Convert RGB to CMY (subtractive primaries)
-        # CMY = 1 - RGB (normalized)
-        total_c = 0.0
-        total_m = 0.0
-        total_y = 0.0
-        
-        for color, weight in weighted:
-            r, g, b = (c / 255.0 for c in color)
-            # Convert to CMY
-            c = 1.0 - r
-            m = 1.0 - g
-            y = 1.0 - b
-            
-            total_c += c * weight
-            total_m += m * weight
-            total_y += y * weight
-        
-        # Average CMY values
-        avg_c = total_c / total_weight
-        avg_m = total_m / total_weight
-        avg_y = total_y / total_weight
-        
-        # Convert back to RGB
-        r = (1.0 - avg_c) * 255
-        g = (1.0 - avg_m) * 255
-        b = (1.0 - avg_y) * 255
-        
+
+        mixed = []
+        for channel in range(3):
+            # The weighted mean of log reflectance. fsum's sum does not depend
+            # on the order it adds in, so the order of the colors cannot move
+            # the result; each share is weight / total, a division of whole
+            # numbers, so scaling every weight cannot either.
+            mean_log = math.fsum(
+                (weight / total_weight)
+                * math.log(max(ColorMath.CMY_ZERO_REFLECTANCE, color[channel] / 255.0))
+                for color, weight in weighted
+            )
+            # Rounded to the nearest step, where the other physical models
+            # truncate: a color mixed alone has to come back as itself.
+            mixed.append(int(math.exp(mean_log) * 255.0 + 0.5))
+
         return (
-            max(0, min(255, int(r))),
-            max(0, min(255, int(g))),
-            max(0, min(255, int(b)))
+            max(0, min(255, mixed[0])),
+            max(0, min(255, mixed[1])),
+            max(0, min(255, mixed[2]))
         )
     
     @staticmethod

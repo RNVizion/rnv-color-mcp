@@ -10,11 +10,12 @@ Text         : transform_text
 Palette store: save_palette, list_palettes, get_palette
 
 Input and selector checks live here, at the seam, not in the engine: mix_colors' mode,
-color count and weights, convert_color's `to`, generate_harmony's scheme, transform_text's operation,
-save_palette's name and colors. The engine keeps the desktop apps' lenient defaults (an
-unknown scheme returns the base, an unknown operation returns the text); the server never
-relies on them. tests/test_public_surfaces.py holds this listing and __all__ equal to the
-registered tools, so neither can fall behind the server again.
+color count and weights, convert_color's `to`, generate_harmony's scheme, color_difference's
+method, transform_text's operation, save_palette's name and colors. The engine keeps the
+desktop apps' lenient defaults (an unknown scheme returns the base, an unknown operation
+returns the text, an unknown method computes CIEDE2000); the server never relies on them.
+tests/test_public_surfaces.py holds this listing and __all__ equal to the registered tools,
+so neither can fall behind the server again.
 """
 from __future__ import annotations
 
@@ -46,6 +47,17 @@ _MIX_MODES = {
     "cmy": ColorMath.subtractive_cmy_mix,  # subtractive (like printer inks)
 }
 
+# ---- delta-E method -----------------------------------------------------
+# The methods the tool description offers, by name. The check on them was written
+# on 2026-10-05 (US Eastern). Before it, the engine's own rule reached the caller:
+# it computes cie76 for that exact string and CIEDE2000 for anything else, and
+# color_difference returned the caller's own string as `method`. So any other
+# spelling came back as a CIEDE2000 figure under the caller's label: "CIE76", as
+# the README writes it, returned 3.9372 for a pair whose CIE76 is 6.5389. The scan
+# of 2026-09-27 fixed the scheme and the operation, which failed open the same
+# way, and did not look here.
+_DIFFERENCE_METHODS = ("ciede2000", "cie76")
+
 # A single shared store instance; path is configurable for deployment (persistent
 # storage on the Space). Defaults to a local file for dev / Codespace.
 _store = PaletteStore(os.environ.get("RNV_PALETTE_STORE", "palettes.json"))
@@ -58,7 +70,10 @@ def mix_colors(
     mode: str = "lab",
 ) -> dict[str, Any]:
     """Blend up to 12 colors. weights default to equal; mode is one of
-    rgb | hsv | lab | paint | ryb | cmy. Returns the mixed color."""
+    rgb | hsv | lab | paint | ryb | cmy. Returns the mixed color.
+
+    Case and outer spaces in mode are folded: "LAB" can only mean lab. The
+    result names the mode that ran."""
     if not colors:
         raise ValueError("Provide at least one color to mix.")
     if len(colors) > MAX_MIX_COLORS:
@@ -66,8 +81,9 @@ def mix_colors(
             f"mix_colors blends up to {MAX_MIX_COLORS} colors; got {len(colors)}. "
             f"Mix in stages: blend a subset, then mix that result with the rest."
         )
-    if mode not in _MIX_MODES:
-        raise ValueError(f"Unknown mode '{mode}'. Choose from {sorted(_MIX_MODES)}.")
+    key = mode.strip().lower() if isinstance(mode, str) else None
+    if key not in _MIX_MODES:
+        raise ValueError(f"Unknown mode {mode!r}. Choose from {sorted(_MIX_MODES)}.")
     if weights is None:
         weights = [1] * len(colors)
     if len(weights) != len(colors):
@@ -98,15 +114,17 @@ def mix_colors(
 
     rgb_list = [ColorMath.hex_to_rgb(resolve_color(c, _store)) for c in colors]
     colors_weights = list(zip(rgb_list, weights))
-    mixed = _MIX_MODES[mode](colors_weights)
+    mixed = _MIX_MODES[key](colors_weights)
     if mixed is None:
         raise ValueError("Mixing produced no result (check colors and weights).")
-    return {"hex": ColorMath.rgb_to_hex(mixed), "rgb": list(mixed), "mode": mode}
+    return {"hex": ColorMath.rgb_to_hex(mixed), "rgb": list(mixed), "mode": key}
 
 
 def convert_color(color: str, to: str | None = None) -> dict[str, Any]:
     """Convert a hex color between formats. With `to`, returns just that format;
-    otherwise returns all of hex/rgb/hsv/hsl/lab."""
+    otherwise returns all of hex/rgb/hsv/hsl/lab.
+
+    Case and outer spaces in `to` are folded. An empty `to` is read as not given."""
     rgb = ColorMath.hex_to_rgb(resolve_color(color, _store))
     all_formats = {
         "hex": ColorMath.rgb_to_hex(rgb),
@@ -116,7 +134,7 @@ def convert_color(color: str, to: str | None = None) -> dict[str, Any]:
         "lab": list(ColorMath.rgb_to_lab(rgb)),
     }
     if to:
-        key = to.lower()
+        key = to.strip().lower()
         if key not in all_formats:
             raise ValueError(f"Unknown format '{to}'. Choose from {sorted(all_formats)}.")
         return {key: all_formats[key]}
@@ -208,10 +226,23 @@ def generate_harmony(base: str, scheme: str) -> list[str]:
 def color_difference(color1: str, color2: str, method: str = "ciede2000") -> dict[str, Any]:
     """Perceptual difference (Delta-E) between two colors.
     method: "ciede2000" (default, modern standard) or "cie76". A value near 1.0 is the
-    threshold a human eye can just notice; larger means more different."""
+    threshold a human eye can just notice; larger means more different.
+
+    An unknown method is refused here, by name, with the choices. The engine
+    falls through to CIEDE2000 for any name it does not know, which would arrive
+    as a figure computed one way and labelled another. Case and outer spaces are
+    folded first: the names stay distinct when folded, so "CIE76" can only mean
+    cie76, and that is resolving, not guessing. The result names the method that
+    was used, in the spelling above.
+    """
+    key = method.strip().lower() if isinstance(method, str) else None
+    if key not in _DIFFERENCE_METHODS:
+        raise ValueError(
+            f"Unknown method {method!r}. Choose from {sorted(_DIFFERENCE_METHODS)}."
+        )
     rgb1 = ColorMath.hex_to_rgb(resolve_color(color1, _store))
     rgb2 = ColorMath.hex_to_rgb(resolve_color(color2, _store))
-    de = ColorMath.delta_e(rgb1, rgb2, method=method)
+    de = ColorMath.delta_e(rgb1, rgb2, method=key)
     if de < 1:
         note = "not perceptible by human eyes"
     elif de < 2:
@@ -234,7 +265,7 @@ def color_difference(color1: str, color2: str, method: str = "ciede2000") -> dic
         # short form is a separate field, never the value itself.
         "delta_e": de,
         "display": _truncate(de, 4),
-        "method": method,
+        "method": key,
         "interpretation": note,
         "color1": ColorMath.rgb_to_hex(rgb1),
         "color2": ColorMath.rgb_to_hex(rgb2),
