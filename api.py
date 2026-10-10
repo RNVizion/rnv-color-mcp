@@ -122,23 +122,38 @@ def mix_colors(
 
 def convert_color(color: str, to: str | None = None) -> dict[str, Any]:
     """Convert a hex color between formats. With `to`, returns just that format;
-    otherwise returns all of hex/rgb/hsv/hsl/lab.
+    with `to` left out, returns all of hex/rgb/hsv/hsl/lab.
 
-    Case and outer spaces in `to` are folded. An empty `to` is read as not given."""
+    hsv and hsl are fractions from 0 to 1, hue included, in the order each name
+    spells: hue, saturation, value and hue, saturation, lightness. The engine's
+    rgb_to_hsl returns hue, lightness, saturation, the order of Python's
+    colorsys, which the desktop apps this engine was copied from keep too, so
+    it is put in the named order here. Until the change written on 2026-10-06
+    (US Eastern) the triple was passed through as it came: `hsl` held hue,
+    lightness, saturation.
+
+    Case and outer spaces in `to` are folded. Only a `to` that is left out
+    (None) means every format. An empty one is refused like any other name
+    that is no format: before the same change it returned every format, the
+    one selector whose empty value was read as a choice."""
     rgb = ColorMath.hex_to_rgb(resolve_color(color, _store))
+    hue, lightness, saturation = ColorMath.rgb_to_hsl(rgb)
     all_formats = {
         "hex": ColorMath.rgb_to_hex(rgb),
         "rgb": list(rgb),
         "hsv": list(ColorMath.rgb_to_hsv(rgb)),
-        "hsl": list(ColorMath.rgb_to_hsl(rgb)),
+        "hsl": [hue, saturation, lightness],
         "lab": list(ColorMath.rgb_to_lab(rgb)),
     }
-    if to:
-        key = to.strip().lower()
-        if key not in all_formats:
-            raise ValueError(f"Unknown format '{to}'. Choose from {sorted(all_formats)}.")
-        return {key: all_formats[key]}
-    return all_formats
+    if to is None:
+        return all_formats
+    key = to.strip().lower() if isinstance(to, str) else None
+    if key not in all_formats:
+        raise ValueError(
+            f"Unknown format {to!r}. Choose from {sorted(all_formats)}, "
+            f"or leave `to` out for all of them."
+        )
+    return {key: all_formats[key]}
 
 
 def place_lightness(color: str, lightness: list[float]) -> dict[str, Any]:
