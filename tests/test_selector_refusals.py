@@ -10,9 +10,11 @@ Eastern). Two things about them changed with those tests. `mode` refused a
 name over its capitals or outer spaces, and `to` over outer spaces: "LAB" can
 only mean lab and " hex " can only mean hex, and both resolve now, as a
 scheme or an operation written that way already did. One thing did not
-change, and is pinned as it stands: an empty `to` is read as not given and
-returns every format, where an empty mode, scheme, operation or method is
-refused.
+change then: an empty `to` was read as not given and returned every format,
+where an empty mode, scheme, operation or method was refused. That was pinned
+as it stood and left to the owner, who decided on 2026-10-06 (US Eastern)
+that it is refused. Only a `to` that is left out means every format now, and
+the refusal says so.
 
 The other three did not refuse, and each failed OPEN. generate_harmony
 returned [base] for a scheme it did not know -- a one-colour "harmony" for a
@@ -45,6 +47,13 @@ value for it must be refused with the choices. What it cannot see: a selector
 with no default (scheme, operation) and one whose default is None
 (convert_color's `to`). Those are held by the classes named for them below,
 and a new one of either kind is still found only by reading.
+
+TestAnEmptySelector holds the rule the five now share: a selector that is
+empty, or only spaces, is refused. Its table is held to the tools' own
+signatures by parameter name, in both directions, so a row cannot be dropped
+without the name being dropped too. The names are kept by hand: a sixth
+selector under a new name is found by the discovery test only if it has a
+named default.
 """
 from __future__ import annotations
 
@@ -93,6 +102,21 @@ CALLABLE_WITH = {
     "mix_colors": {"colors": ["#d2bc93", "#1a1a1a"]},
     "color_difference": {"color1": METHOD_PAIR[0], "color2": METHOD_PAIR[1]},
 }
+
+#: The parameter names that select one choice out of several. Kept by hand;
+#: the module docstring says what that leaves unseen.
+SELECTOR_NAMES = {"mode", "to", "scheme", "operation", "method"}
+
+#: The selectors, each with one value it accepts and the arguments that make
+#: its tool callable.
+SELECTORS = [
+    ("mix_colors", "mode", "lab", {"colors": ["#d2bc93", "#1a1a1a"]}),
+    ("convert_color", "to", "hex", {"color": "#d2bc93"}),
+    ("generate_harmony", "scheme", "triadic", {"base": "#d2bc93"}),
+    ("transform_text", "operation", "UPPERCASE", {"text": "the honest machine"}),
+    ("color_difference", "method", "cie76",
+     {"color1": METHOD_PAIR[0], "color2": METHOD_PAIR[1]}),
+]
 
 
 def tool_description(name):
@@ -216,13 +240,55 @@ class TestConvertFormat:
         with pytest.raises(ValueError):
             api.convert_color("#d2bc93", to="   ")
 
-    def test_an_empty_format_is_read_as_not_given(self):
-        """PINNED AS IT STANDS, NOT DECIDED HERE. An empty mode, scheme,
-        operation or method is refused. An empty `to` returns every format,
-        the same as leaving it out: `to` is the one selector whose absence
-        means every format. Whether an empty one should be refused is the
-        owner's decision, and changing it has to move this test."""
-        assert api.convert_color("#d2bc93", to="") == api.convert_color("#d2bc93")
+    def test_an_empty_format_is_refused_and_the_refusal_says_how_to_get_them_all(self):
+        """Until the change written on 2026-10-06 (US Eastern) an empty `to`
+        returned every format, the same as leaving it out, and this test
+        pinned that as it stood. The owner decided it is refused. A caller
+        who sent "" meaning every format has to be told how to ask for that,
+        so the refusal names the way: leave `to` out."""
+        with pytest.raises(ValueError) as exc:
+            api.convert_color("#d2bc93", to="")
+        assert str(exc.value) == (
+            "Unknown format ''. Choose from ['hex', 'hsl', 'hsv', 'lab', 'rgb'], "
+            "or leave `to` out for all of them.")
+
+    def test_only_a_format_left_out_means_every_format(self):
+        """The control for the refusal above: None is still every format, so
+        the empty string is refused for being empty and not because nothing
+        returns them all."""
+        every = api.convert_color("#d2bc93")
+        assert set(every) == DOCUMENTED_FORMATS
+        assert api.convert_color("#d2bc93", to=None) == every
+
+    @pytest.mark.parametrize("bad", [
+        "", "   ", "\n", "\t", "cmyk",
+        "h", "hs", "he", "hsla", "hexa", "rgba",        # a prefix, a longer word
+        "ex", "ab", "sl", "gb",                         # the end of a name
+        "h s l", "he x", "h-s-l", "h_s_l", "hsl,hsv",   # a name with something inside it
+        "'hex'", "hex.", "hsl\x00",                     # a name with something around it
+        "hsb", "cielab",                                # another word for one
+        "\uff28\uff33\uff2c", "h\u017fl",               # HSL in full-width letters; h, long s, l
+        "all", "any", "none", "null", "*",              # words that sound like every format
+    ])
+    def test_a_string_that_is_no_format_is_refused(self, bad):
+        """A format is resolved only when the folded string IS its name.
+        Anything else would be a guess, and each is refused with the choices
+        and with the way to get every format."""
+        with pytest.raises(ValueError) as exc:
+            api.convert_color("#d2bc93", to=bad)
+        assert str(exc.value) == (
+            f"Unknown format {bad!r}. Choose from ['hex', 'hsl', 'hsv', 'lab', 'rgb'], "
+            f"or leave `to` out for all of them.")
+
+    @pytest.mark.parametrize("bad", [0, 3, 1.5, False, True, [], ["hex"], {}, b"hsl"])
+    def test_a_format_that_is_not_a_string_is_refused_and_never_raises_anything_else(self, bad):
+        """Reached through the Python function only: the tool's schema stops
+        these before they get here. 0, False, an empty list and an empty dict
+        are in the list because the check used to be `if to:`, which read
+        each as not given and returned every format. 3 and a list with
+        something in it used to raise AttributeError."""
+        with pytest.raises(ValueError):
+            api.convert_color("#d2bc93", to=bad)
 
     def test_the_documented_formats_are_exactly_the_ones_returned(self):
         """Both directions: with no `to` the tool returns every format, and
@@ -340,6 +406,36 @@ class TestDifferenceMethod:
         assert set(api._DIFFERENCE_METHODS) == DOCUMENTED_METHODS
         offered = set(re.findall(r"'([^']+)'", tool_description("color_difference")))
         assert offered == DOCUMENTED_METHODS
+
+
+class TestAnEmptySelector:
+    def test_each_selector_accepts_its_own_example(self):
+        """The control: every row of the table reaches a real result, so a
+        refusal in the next test is for the value and not for the call."""
+        for tool, parameter, good, arguments in SELECTORS:
+            assert getattr(api, tool)(**arguments, **{parameter: good}), (tool, parameter)
+
+    def test_the_table_is_every_parameter_with_a_selectors_name(self):
+        """The table against the tools' own signatures, in both directions:
+        its rows are exactly the parameters of registered tools that carry a
+        selector's name. A row dropped from the table fails here, and so does
+        a tool that gains a `mode` or a `to`. Every selector the discovery
+        test finds must be among them."""
+        rows = sorted((tool, parameter) for tool, parameter, _, _ in SELECTORS)
+        found = sorted((tool, name) for tool in api.__all__
+                       for name in inspect.signature(getattr(api, tool)).parameters
+                       if name in SELECTOR_NAMES)
+        assert rows == found
+        assert len(rows) == len(SELECTOR_NAMES) == 5
+        assert {(tool, parameter) for tool, parameter, _ in named_defaults()} <= set(rows)
+
+    @pytest.mark.parametrize("empty", ["", " ", "   ", "\t"])
+    def test_an_empty_selector_is_refused_by_all_five(self, empty):
+        for tool, parameter, _, arguments in SELECTORS:
+            with pytest.raises(ValueError) as refusal:
+                getattr(api, tool)(**arguments, **{parameter: empty})
+            assert "Unknown" in str(refusal.value) and "Choose from" in str(refusal.value), (
+                tool, parameter, str(refusal.value))
 
 
 class TestEverySelectorWithADefault:

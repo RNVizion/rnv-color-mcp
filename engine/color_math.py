@@ -45,13 +45,20 @@ class ColorMath:
     
     @staticmethod
     def rgb_to_hsl(rgb: RGB) -> RGBFloat:
-        """Convert RGB to HSL."""
+        """Convert RGB to HSL, returned as (hue, lightness, saturation).
+
+        That is the order of Python's colorsys, not the order the name
+        spells. The desktop apps this engine was copied from keep the same
+        order, and it is left as it is so that this copy stays comparable
+        with them. api.convert_color puts it in the named order before
+        returning it; a new caller here has to do the same."""
         r, g, b = (c / 255.0 for c in rgb)
         return colorsys.rgb_to_hls(r, g, b)
     
     @staticmethod
     def hsl_to_rgb(hsl: RGBFloat) -> RGB:
-        """Convert HSL to RGB."""
+        """Convert HSL to RGB. Takes (hue, lightness, saturation), the order
+        rgb_to_hsl returns."""
         h, l, s = hsl
         r, g, b = colorsys.hls_to_rgb(h, l, s)
         return (int(r * 255), int(g * 255), int(b * 255))

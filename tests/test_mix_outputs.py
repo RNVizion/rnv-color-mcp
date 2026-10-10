@@ -73,9 +73,12 @@ What this file cannot see, and who can:
     sample of 200 triples, which is not a proof;
   - the tool descriptions' prose. Only the teal example's two figures are
     read from server.py here. test_public_surfaces.py holds the paint
-    figures and the collision set. Nothing holds what the mix_colors
-    description says of cmy, which is one clause: "subtractive like printer
-    inks";
+    figures, the collision set and, since the change written on 2026-10-06
+    (US Eastern), the description's warning about an empty channel, which
+    names cmy beside paint, with its figure for cmy. Nothing reads the
+    description's other clause about cmy, "subtractive like printer inks":
+    TestCmyIsSubtractive holds the engine to its model, and no test holds
+    that clause to either;
   - the live server. A green run says the tree computes these values, not
     that the Space is running this tree.
 
