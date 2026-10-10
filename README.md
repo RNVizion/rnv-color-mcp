@@ -91,8 +91,9 @@ this file), spanning the token-validation matrix (missing, malformed, wrong issu
 audience, expired, valid) and end-to-end scope enforcement over real HTTP. The suite mints its
 own keys and requires no credentials. Beyond auth, it pins parts of the engine: the brand
 vocabulary mirror; the contrast, difference and placement contract; selector and input refusals;
-the palette write path; store durability. Mix, harmony, conversion and text outputs are exercised
-by the smoke scripts and are not yet under regression test.
+color-name resolution; what the mix modes compute; the hsv and hsl conversions; the palette write
+path; store durability. Harmony and text outputs are exercised by the smoke scripts and are not yet
+under regression test.
 
 Moving from the self-issued development key to a real identity provider is configuration, not
 code: point `RNV_AUTH_JWKS_URI` at the provider's JWKS endpoint and set the issuer and audience
