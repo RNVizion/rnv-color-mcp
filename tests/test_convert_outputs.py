@@ -22,7 +22,7 @@ engine alone fails here by name.
 These tests do not compare the tool with colorsys, which is what the engine
 calls: that would hold the code to itself. `reference` works hsv and hsl from
 their definitions in whole numbers and fractions, and TestPositiveControl
-holds the reference to four colours worked by hand, one for each branch of
+holds the reference to four colors worked by hand, one for each branch of
 the hue, with lightness below 1/2, above it and on it. Read it first: if it
 fails, the reference is wrong and every comparison below proves nothing.
 
@@ -34,11 +34,11 @@ What this file cannot see.
     test_mix_outputs.py above all, the two difference figures pinned in
     test_selector_refusals.py, and the difference and placement contracts
     among others.
-  - Colours outside the sample. sample() is 560 of the 16,777,216. A sweep of
-    every colour on 2026-10-06, against a reference in whole-number ratios,
+  - Colors outside the sample. sample() is 560 of the 16,777,216. A sweep of
+    every color on 2026-10-06, against a reference in whole-number ratios,
     found no component outside 0 to 1 and no gap above 3.5e-15; that sweep is
     not part of the suite.
-  - Hue for a grey. The definitions leave it undefined; the tool returns 0
+  - Hue for a gray. The definitions leave it undefined; the tool returns 0
     there, and that is pinned as the convention it is.
   - How hsl_to_rgb rounds. Nothing in the server calls it; only the order of
     its argument is held.
@@ -56,7 +56,7 @@ from engine.color_math import ColorMath
 
 F = Fraction
 
-#: Four colours worked by hand: (hex, rgb, hsv, hsl). Every channel is a
+#: Four colors worked by hand: (hex, rgb, hsv, hsl). Every channel is a
 #: multiple of 51, a whole number of fifths of 255, so the fractions stay
 #: short.
 #: With max and min the largest and smallest of r, g, b, and chroma their
@@ -88,11 +88,11 @@ HAND_WORKED = [
 ]
 HAND, HAND_RGB, HAND_HSV, HAND_HSL = HAND_WORKED[0]
 
-#: The colour the defect was reported with. Hue is (128/255) / 6 = 64/765.
+#: The color the defect was reported with. Hue is (128/255) / 6 = 64/765.
 REPORTED = "#ff8000"
 REPORTED_HSL = (F(64, 765), F(1), F(1, 2))
 
-#: Floats against exact fractions. Over every 8-bit colour the largest gap
+#: Floats against exact fractions. Over every 8-bit color the largest gap
 #: measured on 2026-10-06 was 3.5e-15, in hsl saturation for a near-white
 #: (251, 251, 252), which is in the sample; that is a measurement of this
 #: engine on Python 3.13 and no bound. 1e-13 is about 29 times it, and small
@@ -101,9 +101,9 @@ CLOSE = 1e-13
 
 
 def reference(rgb):
-    """(hsv, hsl) for an 8-bit colour, from the definitions, in fractions.
+    """(hsv, hsl) for an 8-bit color, from the definitions, in fractions.
 
-    Hue is a fraction of a turn. For a grey it is undefined and given as 0,
+    Hue is a fraction of a turn. For a gray it is undefined and given as 0,
     with saturation 0, which is the convention the tool follows."""
     r, g, b = (F(c, 255) for c in rgb)
     high, low = max(r, g, b), min(r, g, b)
@@ -124,23 +124,23 @@ def reference(rgb):
 
 
 def sample():
-    """560 colours, made by arithmetic so that no library's random stream is
+    """560 colors, made by arithmetic so that no library's random stream is
     part of the test:
-      - the 216 on the grid of 0, 51, ... 255, which holds the greys, the
+      - the 216 on the grid of 0, 51, ... 255, which holds the grays, the
         primaries and every tie between channels;
       - 216 off the grid;
-      - 126 near-greys, one channel 1 to 7 steps above the other two, where
+      - 126 near-grays, one channel 1 to 7 steps above the other two, where
         the divisions are by the smallest numbers;
-      - the two colours at which a sweep of every colour found the largest
+      - the two colors at which a sweep of every color found the largest
         float gaps in saturation and in hue."""
     steps = range(0, 256, 51)
     grid = [(r, g, b) for r in steps for g in steps for b in steps]
     off = [(i * 37 % 256, i * 101 % 256, i * 59 % 256) for i in range(1, 217)]
-    near_grey = [colour
+    near_gray = [color
                  for base in (1, 64, 127, 128, 200, 247)
                  for k in range(1, 8)
-                 for colour in ((base + k, base, base), (base, base + k, base), (base, base, base + k))]
-    return grid + off + near_grey + [(251, 251, 252), (130, 132, 131)]
+                 for color in ((base + k, base, base), (base, base + k, base), (base, base, base + k))]
+    return grid + off + near_gray + [(251, 251, 252), (130, 132, 131)]
 
 
 def as_hex(rgb):
@@ -155,12 +155,12 @@ class TestPositiveControl:
     """If this fails, the reference or the sample is wrong, not the tool."""
 
     @pytest.mark.parametrize("name, rgb, hsv, hsl", HAND_WORKED)
-    def test_the_reference_gives_each_hand_worked_colour_exactly(self, name, rgb, hsv, hsl):
+    def test_the_reference_gives_each_hand_worked_color_exactly(self, name, rgb, hsv, hsl):
         assert as_hex(rgb) == name
         assert reference(rgb) == (hsv, hsl)
 
-    def test_the_hand_worked_colours_reach_every_branch_of_the_reference(self):
-        """One colour for each way the hue is worked, and lightness on both
+    def test_the_hand_worked_colors_reach_every_branch_of_the_reference(self):
+        """One color for each way the hue is worked, and lightness on both
         sides of 1/2 and on it, where hsl saturation changes its divisor."""
         tops = set()
         for _, (r, g, b), _, (_, _, lightness) in HAND_WORKED:
@@ -171,11 +171,11 @@ class TestPositiveControl:
         sides = {(l > F(1, 2)) - (l < F(1, 2)) for *_, (_, _, l) in HAND_WORKED}
         assert sides == {-1, 0, 1}
 
-    def test_the_reference_gives_the_reported_colour_exactly(self):
+    def test_the_reference_gives_the_reported_color_exactly(self):
         assert reference((255, 128, 0))[1] == REPORTED_HSL
 
     def test_the_two_orders_can_be_told_apart(self):
-        """The control for every hsl comparison below: for each hand colour
+        """The control for every hsl comparison below: for each hand color
         and for most of the sample, saturation and lightness differ by far
         more than the tolerance, so a triple in the other order cannot
         pass."""
@@ -186,25 +186,25 @@ class TestPositiveControl:
         assert len(apart) > 500, len(apart)
 
     def test_the_sample_is_the_size_it_says_and_reaches_the_edges(self):
-        colours = sample()
-        assert len(colours) == 560 == len(set(colours))
+        colors = sample()
+        assert len(colors) == 560 == len(set(colors))
         for edge in [(0, 0, 0), (255, 255, 255), (255, 0, 0), (0, 255, 0),
                      (0, 0, 255), (255, 255, 0), (102, 102, 102)]:
-            assert edge in colours, edge
+            assert edge in colors, edge
         chroma = lambda rgb: max(rgb) - min(rgb)
-        assert {chroma(rgb) for rgb in colours} >= set(range(0, 8)), "near-greys are missing"
+        assert {chroma(rgb) for rgb in colors} >= set(range(0, 8)), "near-grays are missing"
 
 
 class TestHsl:
     @pytest.mark.parametrize("name, rgb, hsv, hsl", HAND_WORKED)
-    def test_each_hand_worked_colour_is_hue_saturation_lightness(self, name, rgb, hsv, hsl):
+    def test_each_hand_worked_color_is_hue_saturation_lightness(self, name, rgb, hsv, hsl):
         assert api.convert_color(name)["hsl"] == pytest.approx(floats(hsl), abs=CLOSE)
 
-    def test_the_reported_colour_is_hue_saturation_lightness(self):
+    def test_the_reported_color_is_hue_saturation_lightness(self):
         """This came back [0.0837, 0.5, 1] to four places."""
         assert api.convert_color(REPORTED)["hsl"] == pytest.approx(floats(REPORTED_HSL), abs=CLOSE)
 
-    def test_every_sampled_colour_matches_the_definition(self):
+    def test_every_sampled_color_matches_the_definition(self):
         for rgb in sample():
             _, expected = reference(rgb)
             got = api.convert_color(as_hex(rgb))["hsl"]
@@ -213,10 +213,10 @@ class TestHsl:
 
 class TestHsv:
     @pytest.mark.parametrize("name, rgb, hsv, hsl", HAND_WORKED)
-    def test_each_hand_worked_colour_is_hue_saturation_value(self, name, rgb, hsv, hsl):
+    def test_each_hand_worked_color_is_hue_saturation_value(self, name, rgb, hsv, hsl):
         assert api.convert_color(name)["hsv"] == pytest.approx(floats(hsv), abs=CLOSE)
 
-    def test_every_sampled_colour_matches_the_definition(self):
+    def test_every_sampled_color_matches_the_definition(self):
         for rgb in sample():
             expected, _ = reference(rgb)
             got = api.convert_color(as_hex(rgb))["hsv"]
@@ -235,29 +235,29 @@ class TestEachFormatAlone:
     Without this, `to="hsv"` could hand back the hsl triple under the hsv
     label with every test above green: they read the all-formats result."""
 
-    COLOURS = [name for name, *_ in HAND_WORKED] + [REPORTED, "#fbfbfc", "brand gold"]
+    COLORS = [name for name, *_ in HAND_WORKED] + [REPORTED, "#fbfbfc", "brand gold"]
 
-    def test_the_five_values_of_a_colour_are_five_different_values(self):
-        """The control: for these colours no two formats hold the same value,
+    def test_the_five_values_of_a_color_are_five_different_values(self):
+        """The control: for these colors no two formats hold the same value,
         so a format answered with another's value cannot pass below."""
-        for colour in self.COLOURS:
-            values = [repr(v) for v in api.convert_color(colour).values()]
-            assert len(values) == 5 == len(set(values)), (colour, values)
+        for color in self.COLORS:
+            values = [repr(v) for v in api.convert_color(color).values()]
+            assert len(values) == 5 == len(set(values)), (color, values)
 
     def test_each_format_alone_is_the_value_the_full_result_holds(self):
-        for colour in self.COLOURS:
-            every = api.convert_color(colour)
+        for color in self.COLORS:
+            every = api.convert_color(color)
             for name in every:
-                assert api.convert_color(colour, to=name) == {name: every[name]}, (colour, name)
+                assert api.convert_color(color, to=name) == {name: every[name]}, (color, name)
 
     def test_a_folded_name_is_answered_with_its_own_format_too(self):
         """Capitals and outer spaces are folded before the lookup, so a name
         written that way has to reach the same value as the name itself."""
-        for colour in self.COLOURS:
-            every = api.convert_color(colour)
+        for color in self.COLORS:
+            every = api.convert_color(color)
             for name in every:
                 for written in (name.upper(), name.capitalize(), f"  {name} ", f"\t{name.upper()}\n"):
-                    assert api.convert_color(colour, to=written) == {name: every[name]}, (colour, written)
+                    assert api.convert_color(color, to=written) == {name: every[name]}, (color, written)
 
 
 class TestShape:
@@ -271,21 +271,21 @@ class TestShape:
     def test_the_types_are_the_ones_a_client_is_sent(self):
         """hex a string, rgb three whole numbers, hsv, hsl and lab three
         floats each, every triple a list."""
-        for colour in (HAND, "#000000", "#ffffff", REPORTED):
-            out = api.convert_color(colour)
+        for color in (HAND, "#000000", "#ffffff", REPORTED):
+            out = api.convert_color(color)
             assert type(out["hex"]) is str
             assert type(out["rgb"]) is list and [type(x) for x in out["rgb"]] == [int] * 3
             for name in ("hsv", "hsl", "lab"):
-                assert type(out[name]) is list, (colour, name)
-                assert [type(x) for x in out[name]] == [float] * 3, (colour, name, out[name])
+                assert type(out[name]) is list, (color, name)
+                assert [type(x) for x in out[name]] == [float] * 3, (color, name, out[name])
 
-    def test_a_grey_has_hue_0_and_saturation_0(self):
-        """Pinned as a convention: hue has no value for a grey."""
-        for grey in ("#000000", "#808080", "#ffffff"):
-            out = api.convert_color(grey)
-            assert out["hsl"][:2] == [0.0, 0.0] and out["hsv"][:2] == [0.0, 0.0], (grey, out)
+    def test_a_gray_has_hue_0_and_saturation_0(self):
+        """Pinned as a convention: hue has no value for a gray."""
+        for gray in ("#000000", "#808080", "#ffffff"):
+            out = api.convert_color(gray)
+            assert out["hsl"][:2] == [0.0, 0.0] and out["hsv"][:2] == [0.0, 0.0], (gray, out)
 
-    def test_hex_and_rgb_are_the_colour_that_went_in(self):
+    def test_hex_and_rgb_are_the_color_that_went_in(self):
         for name, rgb, _, _ in HAND_WORKED:
             out = api.convert_color(name)
             assert (out["hex"], out["rgb"]) == (name, list(rgb))
@@ -309,7 +309,7 @@ class TestTheEnginePair:
             (float(hue), float(lightness), float(saturation)), abs=CLOSE)
 
     def test_hsl_to_rgb_takes_the_order_rgb_to_hsl_returns(self):
-        """The two are a pair. Each sampled colour comes back within one step
+        """The two are a pair. Each sampled color comes back within one step
         a channel; in the other order most would not come back at all. How
         hsl_to_rgb rounds is not held here."""
         for rgb in sample():

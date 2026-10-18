@@ -129,7 +129,7 @@ write to a real Dataset.
 ## Running a copy?
 
 The code is MIT-licensed; you're free to rebuild, host, and modify it, and I'd rather you did than
-didn't. What a licence can't carry is the environment.
+didn't. What a license can't carry is the environment.
 
 Some capabilities depend on how a deployment is configured, not on the code alone:
 

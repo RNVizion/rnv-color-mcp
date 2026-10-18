@@ -180,7 +180,7 @@ def main() -> int:
     print("  2. add the same keys to WIRE_KEYS in tests/test_brand_mirror.py")
     print("  3. re-pin SYNCED_SHA and the docstring SHA to the synced commit")
     print("\nUntil then the resolver refuses these names. If any of them is a")
-    print("PERMANENT brand colour, that is worth doing now rather than later.")
+    print("PERMANENT brand color, that is worth doing now rather than later.")
     return EXIT_BAD
 
 

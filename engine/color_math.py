@@ -242,12 +242,12 @@ class ColorMath:
         """LAB -> RGB, or None when the triple has no sRGB representation.
 
         `lab_to_rgb` above clamps out-of-gamut channels to 0..255 silently,
-        which turns "this colour does not exist in sRGB" into "here is a
-        different colour" -- a guess wearing the shape of an answer. Callers
+        which turns "this color does not exist in sRGB" into "here is a
+        different color" -- a guess wearing the shape of an answer. Callers
         that must refuse rather than guess use this instead.
 
         In gamut is judged before clamping and with a tolerance of half a
-        quantisation step, so a triple that rounds cleanly into range is NOT
+        quantization step, so a triple that rounds cleanly into range is NOT
         refused: the test is whether clamping would change the value, not
         whether the arithmetic strayed in the last decimal place.
         """
@@ -427,11 +427,11 @@ class ColorMath:
     #: A float only approximates the model, so what protects a result is its
     #: distance from a half. Measured on 2026-10-05 (US Eastern): on every mix
     #: checked, the float computed here was within 1e-13 of a step of the true
-    #: value. The largest error seen was 6.4e-14, for grey 147 at weight 58 with
-    #: grey 217 at weight 1. On that evidence a mix further than 1e-13 from a
-    #: half rounds as exact arithmetic does: six greys in equal parts, 8.2e-13
+    #: value. The largest error seen was 6.4e-14, for gray 147 at weight 58 with
+    #: gray 217 at weight 1. On that evidence a mix further than 1e-13 from a
+    #: half rounds as exact arithmetic does: six grays in equal parts, 8.2e-13
     #: short of 79.5, come out 79. Nearer than that, the float's own error
-    #: decides. Nine greys in equal parts are 1.6e-14 short of 105.5; the float
+    #: decides. Nine grays in equal parts are 1.6e-14 short of 105.5; the float
     #: comes out at 105.5 exactly, and the engine returns 106 where exact
     #: arithmetic gives 105. Both mixes are in tests/test_mix_outputs.py, the
     #: second as a limitation. The result is always one of the two steps the
@@ -683,7 +683,7 @@ class ColorMath:
         - Light absorption (K coefficient)
         - Light scattering (S coefficient)
         
-        What it does well: colours darken when mixed, like real paint, and
+        What it does well: colors darken when mixed, like real paint, and
         pigment-like inputs blend plausibly (#fdd835 + #1e40af -> #315c4d, a dark
         green; crimson + royalblue -> #5d2157).
 

@@ -17,7 +17,7 @@ that it is refused. Only a `to` that is left out means every format now, and
 the refusal says so.
 
 The other three did not refuse, and each failed OPEN. generate_harmony
-returned [base] for a scheme it did not know -- a one-colour "harmony" for a
+returned [base] for a scheme it did not know -- a one-color "harmony" for a
 typo -- and transform_text returned the input unchanged for an operation it
 did not know, as a `result` that reads like success. Both were reproduced on
 the live server on 2026-09-27 (`tridic`, `uppercase`) and fixed that day.
@@ -27,8 +27,8 @@ missed it: as written until 2026-10-05, this docstring said "Four tools take a
 selector", a count that left this one out and had nothing to hold it. The
 engine computes cie76 for that exact string and CIEDE2000 for anything else,
 and the tool returned the caller's own string as `method`. So `cie94` came
-back as a CIEDE2000 figure labelled cie94, and `CIE76`, as the README writes
-it, came back 3.9372 labelled CIE76 for a pair whose CIE76 is 6.5389.
+back as a CIEDE2000 figure labeled cie94, and `CIE76`, as the README writes
+it, came back 3.9372 labeled CIE76 for a pair whose CIE76 is 6.5389.
 Reproduced on the live server on 2026-10-05. It was found by accident, by
 trying spellings of the method while checking another project's figures.
 
@@ -89,7 +89,7 @@ DOCUMENTED_METHODS = {"ciede2000", "cie76"}
 
 DOCUMENTED_FORMATS = {"hex", "rgb", "hsv", "hsl", "lab"}
 
-#: Two colours the two methods measure differently, so each name is shown to
+#: Two colors the two methods measure differently, so each name is shown to
 #: reach its own arithmetic: 6.5389 in cie76, 3.9372 in ciede2000. It is the
 #: pair the brand register corrected on 2026-10-05, where a published 6.5 was
 #: CIE76 in a register whose default is CIEDE2000.
@@ -307,8 +307,8 @@ class TestHarmonyScheme:
         for scheme in DOCUMENTED_SCHEMES:
             assert scheme in message, f"the refusal must list {scheme!r}"
 
-    def test_unknown_scheme_never_returns_a_one_colour_harmony(self):
-        """The old behaviour, stated as the thing that must not happen."""
+    def test_unknown_scheme_never_returns_a_one_color_harmony(self):
+        """The old behavior, stated as the thing that must not happen."""
         with pytest.raises(ValueError):
             api.generate_harmony("brand gold", "")
         with pytest.raises(ValueError):
@@ -335,7 +335,7 @@ class TestTextOperation:
             assert op in message, f"the refusal must list {op!r}"
 
     def test_unknown_operation_never_returns_the_input_unchanged(self):
-        """The old behaviour, stated as the thing that must not happen."""
+        """The old behavior, stated as the thing that must not happen."""
         for bad in ("", "shout", "snake case", "UPPER"):
             with pytest.raises(ValueError):
                 api.transform_text("the honest machine", bad)
@@ -368,7 +368,7 @@ class TestDifferenceMethod:
 
     @pytest.mark.parametrize("bad", ["", "cie94", "cie2000", "de2000", "euclidean", "cie 76", None, 76])
     def test_unknown_method_never_returns_a_figure_under_the_callers_label(self, bad):
-        """The old behaviour, stated as the thing that must not happen: each
+        """The old behavior, stated as the thing that must not happen: each
         of these returned 3.9372, the CIEDE2000 figure, with `method` set to
         whatever was passed."""
         with pytest.raises(ValueError):

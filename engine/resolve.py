@@ -216,7 +216,7 @@ def _from_palette(token: str, store) -> str | None:
     """Resolve 'Name' (primary swatch) or 'Name:N' (Nth swatch, 1-based) from the store.
 
     A stored swatch is served only if it is a hex literal. The store has
-    normalized every colour it accepts since 2026-09-27; before that it stored
+    normalized every color it accepts since 2026-09-27; before that it stored
     whatever it was handed, and the live store held a palette whose second
     swatch was the string 'Purple'. Resolving it returned that string as if it
     were hex, and the first arithmetic on it failed with

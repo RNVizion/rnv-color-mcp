@@ -22,14 +22,14 @@ removed tool fails until its phrase is gone. Counts are not spelled in prose
 at all; the sweep below fails if one reappears in any of the six files. The
 figures the descriptions quote (the brand/CSS collision set, the paint model's
 zero-channel collapse) are asserted against the engine, so the text fails the
-day the behaviour changes.
+day the behavior changes.
 
 Since the change written on 2026-10-06 (US Eastern) four more passages a
 model reads are read here and held to the code. The instructions' last
 sentence lists what is refused; it listed names, schemes and operations while
 modes, formats and methods were refused too, an understatement with nothing
 to hold it. mix_colors' advice on paint and lab gave a reason that held for
-one brand colour and not for another. Its warning about an empty channel
+one brand color and not for another. Its warning about an empty channel
 named paint alone, after the change that made an empty channel dominate in
 cmy as well. And convert_color's description now says what hsv and hsl hold.
 TestWhatIsRefused, TestTheMixAdvice, TestTheEmptyChannelWarning and
@@ -602,12 +602,12 @@ CHOICES = {
     "methods": lambda: list(api._DIFFERENCE_METHODS),
 }
 
-#: Strings that are no colour: nothing like one, near misses of real names,
+#: Strings that are no color: nothing like one, near misses of real names,
 #: and the `css:` escape with a name CSS does not have.
 UNKNOWN_COLOR_NAMES = ["no-such-color", "reddish", "re", "golds", "brand golden", "css:nosuch"]
 
 def _mix_with(position: int, of: int):
-    """A call that mixes `of` colours with the one under test at `position`."""
+    """A call that mixes `of` colors with the one under test at `position`."""
     def call(name):
         colors = (["#1a1a1a", "#d2bc93"] * of)[:of]
         colors[position] = name
@@ -615,13 +615,13 @@ def _mix_with(position: int, of: int):
     return call
 
 
-#: Every position in which a read-only tool takes a colour. mix_colors is
+#: Every position in which a read-only tool takes a color. mix_colors is
 #: tried at each position of a mix of two, of three, and of as many as it
 #: takes; every other position is tried in one call.
 #: test_the_table_covers_every_tool_that_resolves_a_color holds the tools,
 #: and test_no_table_is_short the number of calls for each. Neither can tell
 #: that two calls of a row reach two different positions, and a tool that
-#: gains a second colour parameter is not found by this table.
+#: gains a second color parameter is not found by this table.
 COLOR_POSITIONS = {
     "convert_color": [lambda n: api.convert_color(n)],
     "mix_colors": [_mix_with(position, of) for of in (2, 3, api.MAX_MIX_COLORS)
@@ -645,9 +645,9 @@ class TestWhatIsRefused:
     of REFUSED, both ways. Each key's parameter exists on a registered tool
     and accepts the value given for it. Each value listed as unknown is
     refused with a list of choices; most are near misses, so a selector that
-    began to guess in one of those ways would fail here. An unknown colour
+    began to guess in one of those ways would fail here. An unknown color
     name is refused in every position of every read-only tool that takes a
-    colour: mix_colors in mixes of two, of three and of twelve, the others
+    color: mix_colors in mixes of two, of three and of twelve, the others
     in one call each.
 
     What this cannot see.
@@ -660,21 +660,21 @@ class TestWhatIsRefused:
         picked by the ways a guess is usually made. A guess of another kind
         can pass: letters swapped, a leading article, a synonym not listed,
         and for some of the selectors a plural or a doubled letter. A word that is also a hex
-        colour without its # (bad, fed, facade) is a colour and resolves;
+        color without its # (bad, fed, facade) is a color and resolves;
         that is the hex form, not a name guessed.
-      - save_palette, the one tool that writes. It refuses an unknown colour
+      - save_palette, the one tool that writes. It refuses an unknown color
         by position; test_palette_contract.py holds that.
-      - A colour swallowed only under some other argument: with weights, in
+      - A color swallowed only under some other argument: with weights, in
         another mode, with another scheme or method, or in a mix of four to
-        eleven colours.
+        eleven colors.
       - A tool that reaches the resolver through a helper. The table is held
         to the tools whose own source names resolve_color, so a new tool
         that resolved through a function of its own would not be asked for
         a row.
       - Other refusals the sentence does not list: a mix weight, a palette's
-        swatch number, more colours than mix_colors takes. And get_palette
+        swatch number, more colors than mix_colors takes. And get_palette
         answers null for a palette name it does not have, which is a lookup
-        and not a refusal; the sentence says colour names.
+        and not a refusal; the sentence says color names.
       - The tool layer. These call the functions the tools wrap. Through the
         tool, a value of the wrong type is stopped by the schema with the
         schema's own message, which lists no choices."""
@@ -748,7 +748,7 @@ class TestWhatIsRefused:
 
     def test_each_color_position_accepts_a_color(self):
         """The control: every call in the table reaches a result when the
-        colour is real, so a refusal below is for the name."""
+        color is real, so a refusal below is for the name."""
         for tool, calls in COLOR_POSITIONS.items():
             for call in calls:
                 assert call("brand gold"), tool
@@ -770,14 +770,14 @@ class TestTheMixAdvice:
     ingredients and not for the blue's.
 
     What is held. Which mode the advice gives to which use, and which mode
-    each reason is about. For every pair of brand colours, lab's mix is
+    each reason is about. For every pair of brand colors, lab's mix is
     within one unit of the mean of the two in CIELAB, and paint's mix is a
-    different colour from lab's for nearly all of them.
+    different color from lab's for nearly all of them.
 
     What this cannot see.
       - A lab mix whose mean falls outside sRGB. The engine clamps it, and
         the result is then not the point between: red + white lands about 8
-        units from it. No pair of brand colours does this today, and the
+        units from it. No pair of brand colors does this today, and the
         description does not say it.
       - Whether paint is what real pigments would make. Nothing here
         compares with a measured pigment.
@@ -798,7 +798,7 @@ class TestTheMixAdvice:
         assert len(self.brand_pairs()) >= 45
 
     def test_lab_returns_the_point_between_its_ingredients(self):
-        lab = lambda colour: ColorMath.rgb_to_lab(ColorMath.hex_to_rgb(colour))
+        lab = lambda color: ColorMath.rgb_to_lab(ColorMath.hex_to_rgb(color))
         for a, b in self.brand_pairs():
             mixed = api.mix_colors([a, b], mode="lab")["hex"]
             middle = [(x + y) / 2 for x, y in zip(lab(a), lab(b))]
@@ -806,9 +806,9 @@ class TestTheMixAdvice:
 
     def test_the_point_between_is_not_where_the_ingredients_are(self):
         """The control for the test above: its measure can tell the middle
-        from an end. For every pair of brand colours each ingredient is
+        from an end. For every pair of brand colors each ingredient is
         further from the middle than the one unit the test allows."""
-        lab = lambda colour: ColorMath.rgb_to_lab(ColorMath.hex_to_rgb(colour))
+        lab = lambda color: ColorMath.rgb_to_lab(ColorMath.hex_to_rgb(color))
         for a, b in self.brand_pairs():
             assert math.dist(lab(a), lab(b)) / 2 > 1.5, (a, b)
 
@@ -829,7 +829,7 @@ class TestTheEmptyChannelWarning:
 
     What is held. The modes the warning names are exactly the modes in which
     its own example comes out near-black, both ways. Each named mode does
-    work one channel at a time. Each colour it calls a pure digital primary
+    work one channel at a time. Each color it calls a pure digital primary
     has an empty channel. Its example, read from the text, gives black in the
     first mode it names, the quoted figure in the second, and a green in the
     third. Its weighted case, read from the text, gives the two figures it
@@ -844,7 +844,7 @@ class TestTheEmptyChannelWarning:
       - Weight beyond the one case the sentence gives. Measured on
         2026-10-07 for white against css:blue: cmy lifts the channel to 23
         of 255 at 2:1, 132 at 10:1 and 237 at 100:1; paint to 0, 2 and 21.
-        Against a darker colour cmy lifts less. And "hardly" is about a
+        Against a darker color cmy lifts less. And "hardly" is about a
         channel that is exactly empty: one at 5 of 255 comes up to 40 in
         paint at 10:1.
       - The rest of the description's prose. A false sentence added beside
@@ -882,7 +882,7 @@ class TestTheEmptyChannelWarning:
         assert len(named) == len(set(named)) and set(named) <= set(api._MIX_MODES), named
         assert set(named) == self.collapsed(), (sorted(named), sorted(self.collapsed()))
 
-    #: Pairs to mix, and other colours whose channels are swapped in around
+    #: Pairs to mix, and other colors whose channels are swapped in around
     #: the one under test.
     PAIRS = [((200, 30, 90), (10, 180, 250)), ((255, 255, 0), (0, 0, 255)), ((17, 99, 203), (240, 120, 33))]
     OTHERS = [((1, 2, 3), (250, 251, 252)), ((128, 64, 32), (8, 16, 24))]
@@ -890,8 +890,8 @@ class TestTheEmptyChannelWarning:
     def crossings(self, mode) -> int:
         """How often an output channel moves when only the OTHER channels of
         the ingredients change. 0 means the mode works one channel at a time
-        on these colours."""
-        hexes = lambda *colours: ["#%02x%02x%02x" % tuple(c) for c in colours]
+        on these colors."""
+        hexes = lambda *colors: ["#%02x%02x%02x" % tuple(c) for c in colors]
         moved = 0
         for a, b in self.PAIRS:
             base = self.channels(hexes(a, b), mode)
@@ -936,7 +936,7 @@ class TestTheEmptyChannelWarning:
         assert api.mix_colors(colors, weights=weights, mode=hardly)["hex"] == second_figure
 
     def test_the_figures_bear_the_sentence_out(self):
-        """The case is read from the text: the heavier colour has every
+        """The case is read from the text: the heavier color has every
         channel full, and the lighter one has a channel that is empty. At
         equal weights that channel is near empty in both modes. With the
         weight, it is past 100 of 255 in the mode said to shift and within
@@ -958,7 +958,7 @@ class TestTheConvertDescription:
     all, and says what hsv and hsl hold.
 
     What is held. The formats it names are exactly the ones returned, both
-    ways. Leaving `to` out returns them all. Over 222 colours every hsv and
+    ways. Leaving `to` out returns them all. Over 222 colors every hsv and
     hsl component is from 0 to 1, and for the six pure hues hue times 360 is
     the angle everyone uses.
 
@@ -990,20 +990,20 @@ class TestTheConvertDescription:
     def test_hsv_and_hsl_are_fractions_from_0_to_1(self):
         self.passage()
         steps = range(0, 256, 51)
-        colours = [(r, g, b) for r in steps for g in steps for b in steps]
-        colours += [(1, 0, 0), (0, 0, 1), (254, 255, 255), (255, 0, 1), (251, 251, 252), (130, 132, 131)]
-        assert len(colours) == 222
-        for rgb in colours:
+        colors = [(r, g, b) for r in steps for g in steps for b in steps]
+        colors += [(1, 0, 0), (0, 0, 1), (254, 255, 255), (255, 0, 1), (251, 251, 252), (130, 132, 131)]
+        assert len(colors) == 222
+        for rgb in colors:
             out = api.convert_color("#%02x%02x%02x" % rgb)
             assert all(0.0 <= x <= 1.0 for x in out["hsv"] + out["hsl"]), (rgb, out)
 
-    @pytest.mark.parametrize("colour, degrees", [
+    @pytest.mark.parametrize("color, degrees", [
         ("#ff0000", 0), ("#ffff00", 60), ("#00ff00", 120),
         ("#00ffff", 180), ("#0000ff", 240), ("#ff00ff", 300),
     ])
-    def test_hue_times_360_is_degrees(self, colour, degrees):
+    def test_hue_times_360_is_degrees(self, color, degrees):
         self.passage()
-        out = api.convert_color(colour)
+        out = api.convert_color(color)
         assert out["hsv"][0] * 360 == pytest.approx(degrees, abs=1e-9)
         assert out["hsl"][0] * 360 == pytest.approx(degrees, abs=1e-9)
 

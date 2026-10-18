@@ -56,7 +56,7 @@ def test_the_retired_gold_is_gone():
 def test_the_old_identifier_is_gone():
     src = pathlib.Path(V.__file__).read_text(encoding="utf-8")
     assert "BRAND_GOLD_DARK" not in src, (
-        "BRAND_GOLD_DARK was retired in favour of BRAND_DARK_GOLD")
+        "BRAND_GOLD_DARK was retired in favor of BRAND_DARK_GOLD")
 
 
 def test_the_wire_format_did_not_move():
@@ -92,7 +92,7 @@ def test_the_mirror_records_which_upstream_commit_it_carries():
 def test_the_registered_additions_resolve():
     """The four constants upstream registered after the 2026-08-24 pin.
 
-    still-gold is the case that earned this test: a PERMANENT brand colour
+    still-gold is the case that earned this test: a PERMANENT brand color
     that the brand's own resolver refused from 2026-08-25 to 2026-09-12.
     """
     assert V.BRAND_STILL_GOLD == "#9b907a"

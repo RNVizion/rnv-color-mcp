@@ -157,10 +157,10 @@ def convert_color(color: str, to: str | None = None) -> dict[str, Any]:
 
 
 def place_lightness(color: str, lightness: list[float]) -> dict[str, Any]:
-    """Hold a colour's hue and chroma, set its lightness -- the register's own
+    """Hold a color's hue and chroma, set its lightness -- the register's own
     construction rule for a text pair, made executable.
 
-    RNV builds a pair as ONE HUE AT TWO LIGHTNESSES: take a colour, keep `a`
+    RNV builds a pair as ONE HUE AT TWO LIGHTNESSES: take a color, keep `a`
     and `b` exactly, set `L*` to each rung. BRAND_BLUE and BRAND_DARK_BLUE were
     built this way from a single mix, as were the status text pairs. Until now
     the step was done by hand in a scratch script, which is why a published
@@ -174,8 +174,8 @@ def place_lightness(color: str, lightness: list[float]) -> dict[str, Any]:
     different from the one requested while implying they were the same.
 
     Refuses rather than clamps. Not every (L*, a, b) exists in sRGB; a
-    lightness too far from a chromatic colour's range has no representation,
-    and the honest answer is the refusal, not the nearest colour that does fit.
+    lightness too far from a chromatic color's range has no representation,
+    and the honest answer is the refusal, not the nearest color that does fit.
     """
     if not lightness:
         raise ValueError("place_lightness needs at least one lightness value.")
@@ -225,9 +225,9 @@ def generate_harmony(base: str, scheme: str) -> list[str]:
 
     An unknown scheme is refused here, by name, against the table the engine
     dispatches on. The engine's own by-name entry point returns [base] for a
-    name it does not know -- a one-colour "harmony" for a typo, indistinguishable
+    name it does not know -- a one-color "harmony" for a typo, indistinguishable
     from a real answer downstream. That is the guess the resolver refuses for
-    colours, and the same rule applies to the scheme. (Selector checks live at
+    colors, and the same rule applies to the scheme. (Selector checks live at
     this seam, beside mix_colors' mode check and convert_color's `to` check.)
     """
     key = scheme.strip().lower()
@@ -245,7 +245,7 @@ def color_difference(color1: str, color2: str, method: str = "ciede2000") -> dic
 
     An unknown method is refused here, by name, with the choices. The engine
     falls through to CIEDE2000 for any name it does not know, which would arrive
-    as a figure computed one way and labelled another. Case and outer spaces are
+    as a figure computed one way and labeled another. Case and outer spaces are
     folded first: the names stay distinct when folded, so "CIE76" can only mean
     cie76, and that is resolving, not guessing. The result names the method that
     was used, in the spelling above.
@@ -347,7 +347,7 @@ def transform_text(text: str, operation: str) -> dict[str, str]:
     An unknown operation is refused here, by name. The engine's dispatcher
     returns the text UNCHANGED for a mode it does not know -- which arrives as
     a `result` that reads like success and is not. That is the guess the
-    resolver refuses for colours, and the same rule applies to the operation.
+    resolver refuses for colors, and the same rule applies to the operation.
     """
     mode = _TEXT_OPERATIONS.get(operation)
     if mode is None:
