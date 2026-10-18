@@ -2,7 +2,7 @@
 #
 # THIS WORKFLOW GATES NOTHING, ON PURPOSE. It is not a required check, nothing
 # carries `needs:` on it, and sync-hf.yml never waits for it. Upstream adding a
-# colour is not a defect of this repository -- the mirror is synced by a human
+# color is not a defect of this repository -- the mirror is synced by a human
 # in a deliberate commit, by design -- so failing a push over it would stop good
 # work for something that work did not do, and the first person to hit that at
 # eleven at night would route around it. Gate a defect, warn about a queue.
