@@ -6,7 +6,7 @@ Two defects, one write path, found 2026-09-27:
 1. save_palette stored whatever it was handed. The live store held a palette
    whose swatches read 'Purple' and 'Green'; referencing one failed with
    `invalid literal for int() with base 16: 'Pu'` -- no reason, no location.
-   Now every colour is resolved through the same resolver as the other tools
+   Now every color is resolved through the same resolver as the other tools
    and stored as normalized hex; an unknown token refuses the save naming its
    position; and a malformed swatch already in the store refuses by palette,
    position and value instead of leaking arithmetic.
