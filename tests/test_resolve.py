@@ -1,7 +1,7 @@
 """
-resolve_color, asserted directly: the layer every colour input passes through.
+resolve_color, asserted directly: the layer every color input passes through.
 
-Every tool that takes a colour calls engine.resolve.resolve_color, so nearly
+Every tool that takes a color calls engine.resolve.resolve_color, so nearly
 every test file exercises it, and until 2026-09-30 none asserted it as a unit.
 Its contract is the module docstring: a hex literal, then a saved palette, then
 an RNV brand name, then a CSS name, then a refusal; "css:" forces the CSS
@@ -9,7 +9,7 @@ layer. This file holds the resolver to that contract, layer by layer and in
 order, and holds the vocabulary to the one property the resolver needs of it:
 every registered name is reachable.
 
-REACHABILITY IS THE BRAND RULING, EXECUTABLE. A registered colour is permanent
+REACHABILITY IS THE BRAND RULING, EXECUTABLE. A registered color is permanent
 and answers to every name it was registered under (Build Runbook, decisions
 log, 2026-09-13). The resolver strips and lowercases the token and tries the
 hex layer first, so a brand key that carried a capital or a space, read as a
@@ -57,7 +57,7 @@ ACCEPTED_KINDS = ("a hex", "a CSS name", "an RNV brand name", "a saved palette r
 
 def store_holding(tmp_path, palettes: dict[str, list[str]]) -> PaletteStore:
     """A real PaletteStore over a file written directly, bypassing the write
-    path, so it can hold names and colours save_palette would refuse today."""
+    path, so it can hold names and colors save_palette would refuse today."""
     path = tmp_path / "palettes.json"
     path.write_text(json.dumps({
         name: {"colors": colors, "metadata": {}} for name, colors in palettes.items()
@@ -81,7 +81,7 @@ class TestPositiveControl:
 
     def test_a_nonsense_token_is_refused(self):
         with pytest.raises(UnknownColor):
-            resolve_color("not-a-colour-at-all")
+            resolve_color("not-a-color-at-all")
 
     def test_the_collision_set_is_what_the_documents_say(self):
         # Computed above; checked once against the set the README, the server's
@@ -183,7 +183,7 @@ class TestEveryRegisteredNameIsReachable:
 
     def test_every_value_is_already_in_the_form_the_resolver_returns(self):
         # The hex layer normalizes; a table value in another form would make the
-        # same colour compare unequal depending on how it was named.
+        # same color compare unequal depending on how it was named.
         assert not {k: v for k, v in RNV_BRAND.items() if normalize_hex(v) != v}
         assert not {k: v for k, v in CSS_NAMES.items() if normalize_hex(v) != v}
 
@@ -253,7 +253,7 @@ class TestRefusal:
 
 
 class TestAliasesAreLiteral:
-    """Pins today's behaviour so the parked alias normalization moves it on
+    """Pins today's behavior so the parked alias normalization moves it on
     purpose. The README writes `royalblue` because `royal blue` refuses."""
 
     @pytest.mark.parametrize("registered, unregistered", [
