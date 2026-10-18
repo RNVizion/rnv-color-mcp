@@ -278,7 +278,7 @@ def generate_harmony(base_color: tuple[int, int, int],
     An unknown name falls back to [base_color]. That fallback is the desktop
     GUI's contract (a combo box can never send an unknown name) and is kept for
     it; the server does NOT rely on it -- api.generate_harmony refuses an
-    unknown scheme by name before this is reached, because a one-colour
+    unknown scheme by name before this is reached, because a one-color
     "harmony" returned for a typo is a guess wearing the shape of an answer.
     """
     harmony_type = HARMONY_SCHEMES.get(harmony_name.lower())
