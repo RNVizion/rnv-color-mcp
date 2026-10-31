@@ -23,7 +23,7 @@
 # advisory.
 #
 # Engine, store, and resolver are standard-library only.
-fastmcp>=3.4,<4
+fastmcp>=3.4.10,<4
 huggingface_hub>=1.0,<2
 
 # Imported directly (pydantic in api.py and server.py, starlette in server.py),
