@@ -118,16 +118,16 @@ registered upstream 2026-09-12."""
 BRAND_TEAL: Final[str] = "#00b0a0"
 """A brand color, permanently registered; the tenth. Its first role is inline
 code on the web, emitted as --rnv-code, but a role is where a color starts
-rather than where it is confined -- which upstream acted on.
+rather than where it is confined -- which upstream acted on. Brand colors are
+the base set the brand reuses, derives from, and builds ramps out of. Expect it
+anywhere the register is consumed, the fashion app included.
 
 [MENTION: this constant was BRAND_WEB_CODE for one day and was renamed
 2026-09-13, because a name that states a surface is not undone by documentation
 saying the color is not confined to it. The PERMANENT key moved with it,
 web-code to teal. The WEB key, the emitted token and the value are all
 unchanged, and "web-code" is kept below as a resolver alias so the name it
-shipped under still answers -- a retired IDENTIFIER, not a retired key. :MENTION] brand colors are the base set the brand
-reuses, derives from, and builds ramps out of. Expect it anywhere the register
-is consumed, the fashion app included.
+shipped under still answers -- a retired IDENTIFIER, not a retired key. :MENTION]
 
 What upstream means by "not a third brand hue" is narrower than membership and
 should not be read as "not a brand color". NO COLOR CLEARS 4.5 ON BOTH

@@ -22,9 +22,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4   # shallow is fine; nothing here pushes
+      - uses: actions/checkout@v7   # shallow is fine; nothing here pushes
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"   # matches the Space image; see tests.yml matrix
           cache: pip
@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0    # full history; a shallow clone can't push cleanly
 
