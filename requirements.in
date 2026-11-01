@@ -11,12 +11,15 @@
 # Regenerate after editing this file, on Python 3.13 (the Space's image), with
 # the pip-tools that Dependabot runs:
 #
-#   pip install "pip-tools==7.5.3" "click<8.2"
+#   pip install "pip<26" "pip-tools==7.5.3" "click<8.2"
 #   pip-compile --generate-hashes --strip-extras --output-file requirements.txt requirements.in
 #
 # click<8.2 is not optional: with a newer click, pip-tools 7.5.3 writes a
 # spurious --no-index into the command recorded in the lock's header, and that
-# command then fails when it is re-run. Add --upgrade to move every pin to the
+# command then fails when it is re-run. pip<26 is not optional either: with pip
+# 26.2.2, pip-tools 7.5.3 stops with a TypeError (make_requirement_preparer()
+# missing allow_editables) before it resolves anything; pip 25.3 works
+# (measured 2026-10-31). Add --upgrade to move every pin to the
 # newest versions these ranges allow; that is a deliberate refresh, delivered
 # and tested like any other change. Dependabot (security updates only; see
 # .github/dependabot.yml) regenerates the lock when a pinned package has an

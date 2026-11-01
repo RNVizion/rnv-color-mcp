@@ -26,7 +26,14 @@ across six repos, and a system that cannot hold one identifier across its
 own repositories is not positioned to align anyone else's. The names now
 match upstream. The check still compares values.
 
-Mirrored from rnv-brand@9ddde4572859748e56e1ae532738f6a9cc548cbc, 2026-09-13.
+Mirrored from rnv-brand@980d6272cc7bbf0e6eb0e0a77f9b9bd9657c3146, 2026-09-13.
+That is the ID rnv-brand's history rewrite of 2026-10-21 gave the commit first
+pinned here as 9ddde4572859; engine/brand.py is the same blob under both
+(0d637a57). Re-pinned 2026-10-31 with no value moved, because a check that
+fetches a commit the repository no longer holds is answered only for as long
+as GitHub keeps serving it, and then reports could-not-look, which the deploy
+gate treats as a warning. The earlier IDs below are the pre-rewrite ones;
+rnv-brand's history/2026-10-21-commit-map.txt gives each its twin.
 Previously rnv-brand@a46a9eac6dd4, 2026-09-13; @0d96ff889c9f, 2026-09-12; @361c0e2a4b0e, 2026-08-24; @60bd56d1bf5c, 2026-08-22;
 and @c4d479dbf16b, 2026-08-10, which carried the gold retired on 2026-08-17.
 A mirror whose contents moved and whose SHA did not is worse than one that

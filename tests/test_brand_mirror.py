@@ -18,7 +18,7 @@ import re
 from engine import brand_vocab as V
 
 RETIRED_GOLD = "#b" "19145"
-SYNCED_SHA = "9ddde4572859748e56e1ae532738f6a9cc548cbc"
+SYNCED_SHA = "980d6272cc7bbf0e6eb0e0a77f9b9bd9657c3146"
 
 # The resolver vocabulary IS the wire format. A client sends these strings.
 WIRE_KEYS = {
