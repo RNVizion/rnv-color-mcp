@@ -45,30 +45,16 @@ jobs:
       # repository and must never block a deploy. Gate a defect, warn about a
       # queue.
       #
-      # Exit 2 is what makes this safe to put on the deploy path at all: the
-      # check reads the network, and an unreachable GitHub is someone else's
-      # outage, not a bad mirror. Without the distinction this step would
-      # block every deploy during an upstream incident, which is a queue
-      # failing a defect gate -- the exact shape that teaches people to
-      # disable a check.
+      # Since Phase 8.12 (2026-11-01) it reads rnv-brand as installed above
+      # from tests/requirements-dev.txt, at the pin, and makes no network call.
+      # So there is no outage to tell from a defect, and any non-zero exit
+      # stops the deploy. Until 8.12 it fetched the pin over HTTPS, and exit 2
+      # (unreachable) warned and deployed, so a pin GitHub stopped serving
+      # would have turned this gate into a warning. A pin that cannot be
+      # installed now fails the Install step. The pytest step above makes the
+      # same comparison; this step names the verdict in the log.
       - name: Mirror matches its pinned commit
-        run: |
-          set +e
-          python scripts/check_brand_currency.py --mode transcription
-          code=$?
-          set -e
-          case $code in
-            0)
-              echo "mirror verified against its pinned commit"
-              ;;
-            2)
-              echo "::warning title=Mirror not verified::Upstream was unreachable, so the mirror could not be checked against its pin. This is an outage, not a mismatch -- deploying."
-              ;;
-            *)
-              echo "::error title=Mirror does not match its pin::engine/brand_vocab.py does not carry the commit its docstring claims. Fix the mirror or the pin before this ships."
-              exit 1
-              ;;
-          esac
+        run: python scripts/check_brand_currency.py --mode transcription
 
   sync-to-hub:
     needs: test               # the gate: no green suite, no deploy

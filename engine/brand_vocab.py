@@ -11,9 +11,12 @@ there has to answer what happens when it fails, and every answer is bad. Fail
 closed and the server refuses every color; fall back and you need this file
 anyway; guess and you have broken the one rule the resolver exists to enforce.
 
-Why a mirror and not an import: this Space deploys as its own container. There
-is no cross-repo import path, and adding one would put a build-time network
-dependency under a value that changes twice a year.
+Why a mirror and not an import: this Space deploys as its own container and
+installs requirements.txt only. Importing the register at run time would put a
+build-time network dependency under a value that changes twice a year. Since
+Phase 8.12 the TESTS install rnv-brand at the pin below (tests/
+requirements-dev.txt) and compare this file with it; production still reads
+only this file.
 
 Sync discipline: values here are corrected when drift is detected against
 rnv-brand, by a human, in a deliberate commit. Nothing propagates
@@ -26,13 +29,16 @@ across six repos, and a system that cannot hold one identifier across its
 own repositories is not positioned to align anyone else's. The names now
 match upstream. The check still compares values.
 
-Mirrored from rnv-brand@980d6272cc7bbf0e6eb0e0a77f9b9bd9657c3146, 2026-09-13.
-That is the ID rnv-brand's history rewrite of 2026-10-21 gave the commit first
-pinned here as 9ddde4572859; engine/brand.py is the same blob under both
-(0d637a57). Re-pinned 2026-10-31 with no value moved, because a check that
-fetches a commit the repository no longer holds is answered only for as long
-as GitHub keeps serving it, and then reports could-not-look, which the deploy
-gate treats as a warning. The earlier IDs below are the pre-rewrite ones;
+Mirrored from rnv-brand@108213b82a4f71163ddd04b56ea15c2425de45dc, 2026-11-01.
+That is rnv-brand 48.1.0, the first release that installs as rnv_brand, which
+this repository can import from its root where engine.brand cannot. Re-pinned
+in Phase 8.12 with no value moved: RNV_BRAND and the eleven constants below are
+identical there and at the two pins before it.
+Previously rnv-brand@980d6272cc7b, pinned 2026-10-31. That is the ID
+rnv-brand's history rewrite of 2026-10-21 gave @9ddde4572859, pinned
+2026-09-13; the move was made because a fetch of a commit the repository no
+longer holds is answered only for as long as GitHub keeps serving it. The IDs
+below are the pre-rewrite ones;
 rnv-brand's history/2026-10-21-commit-map.txt gives each its twin.
 Previously rnv-brand@a46a9eac6dd4, 2026-09-13; @0d96ff889c9f, 2026-09-12; @361c0e2a4b0e, 2026-08-24; @60bd56d1bf5c, 2026-08-22;
 and @c4d479dbf16b, 2026-08-10, which carried the gold retired on 2026-08-17.
@@ -56,11 +62,13 @@ this repository, so it fires when the MIRROR changes and is silent when
 UPSTREAM does -- the only case it was written for. A guard scoped to one
 side of a boundary cannot see the boundary.
 
-The check that can is scripts/check_brand_currency.py, which parses
-upstream's engine/brand.py and compares key sets. It runs in a SCHEDULED
-workflow that gates nothing, because upstream moving is a queue and not a
-defect of this repository; the same script runs in the gated path in
---mode transcription, where a mismatch against the pin above IS a defect.
+The check that can see upstream past the pin is
+scripts/check_brand_currency.py --mode currency, which parses upstream's
+engine/brand.py at HEAD and compares key sets. It runs in a SCHEDULED workflow
+that gates nothing, because upstream moving is a queue and not a defect of this
+repository. Against the pin above, a mismatch IS a defect: since 8.12 the suite
+and the same script in --mode transcription read the installed register, and
+both gate.
 
 Consumed by: engine/resolve.py, which imports RNV_BRAND and nothing else.
 

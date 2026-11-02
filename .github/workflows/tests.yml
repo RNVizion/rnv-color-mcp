@@ -45,8 +45,13 @@ jobs:
     # upstream has moved PAST the pin -- is a queue and lives in a scheduled
     # workflow that gates nothing. See .github/workflows/brand-currency.yml.
     #
-    # It is not in the pytest suite because the suite stays offline and
-    # credential-free, and this reads the network.
+    # The job's name is a required status check in the ruleset on main.
+    # Renaming it blocks every pull request until the ruleset is edited.
+    #
+    # Since Phase 8.12 (2026-11-01) it installs rnv-brand at the pin in
+    # tests/requirements-dev.txt and compares the mirror with that, with no
+    # fetch. The pytest jobs make the same comparison; this job keeps the
+    # check's name and its plain-language verdict.
     name: mirror matches its pinned commit
     runs-on: ubuntu-latest
 
@@ -57,26 +62,16 @@ jobs:
         with:
           python-version: "3.13"
 
-      # Exit 2 means the comparison never ran: upstream was unreachable. That
-      # is someone else's outage, not a mirror that lies about its pin, so it
-      # warns and passes, exactly as the deploy gate in sync-hf.yml does. Until
-      # 2026-09-29 this job failed on 2 as well, so an upstream incident turned
-      # this status check red over a defect this repository did not have.
-      - name: Compare mirror against upstream at SYNCED_SHA
+      - name: Install the register at the pin
         run: |
-          set +e
-          python scripts/check_brand_currency.py --mode transcription
-          code=$?
-          set -e
-          case $code in
-            0)
-              echo "mirror verified against its pinned commit"
-              ;;
-            2)
-              echo "::warning title=Mirror not verified::Upstream was unreachable, so the mirror could not be checked against its pin. This is an outage, not a mismatch."
-              ;;
-            *)
-              echo "::error title=Mirror does not match its pin::engine/brand_vocab.py does not carry the commit its docstring claims. Fix the mirror or the pin."
-              exit 1
-              ;;
-          esac
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements-dev.txt
+
+      # Any non-zero exit fails. Until 8.12 exit 2 meant upstream was
+      # unreachable and warned instead. Nothing here reads upstream now, so a
+      # 2 means the comparison could not be made in an environment this job
+      # just built: no register where the install put it, or a mirror that
+      # names no commit. The script prints which. A pin that cannot be
+      # installed fails the step above.
+      - name: Compare mirror against the register at SYNCED_SHA
+        run: python scripts/check_brand_currency.py --mode transcription

@@ -8,17 +8,37 @@ This repo is a MIRROR, not a consumer. What has to be true is narrower than in
 the apps and more important: the values match upstream, the wire format does
 not move when the identifiers do, and the SHA says which upstream commit these
 values came from.
+
+Since Phase 8.12 (2026-11-01) the comparison with upstream runs here too.
+rnv-brand is installed at the pin from tests/requirements-dev.txt, so the
+suite reads the register itself, offline and with no credential, and a mirror
+that does not carry its pinned commit fails every pytest job and the deploy
+gate. Upstream at HEAD is still not read here: that is a queue, and lives in
+scripts/check_brand_currency.py --mode currency, which gates nothing.
 """
 from __future__ import annotations
 
+import importlib.metadata
+import json
 import pathlib
 import inspect
 import re
 
+import pytest
+
 from engine import brand_vocab as V
 
 RETIRED_GOLD = "#b" "19145"
-SYNCED_SHA = "980d6272cc7bbf0e6eb0e0a77f9b9bd9657c3146"
+SYNCED_SHA = "108213b82a4f71163ddd04b56ea15c2425de45dc"
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+DEV_REQS = ROOT / "tests" / "requirements-dev.txt"
+PIN_RE = re.compile(
+    r"^rnv-brand\s*@\s*git\+https://github\.com/RNVizion/rnv-brand"
+    r"(?:\.git)?@(?P<ref>\S+)\s*$", re.M)
+
+# The mirror's constants, named as the register names them.
+CONSTANTS = tuple(n for n in V.__all__ if n != "RNV_BRAND")
 
 # The resolver vocabulary IS the wire format. A client sends these strings.
 WIRE_KEYS = {
@@ -33,13 +53,31 @@ WIRE_KEYS = {
     "black", "true black", "white", "brand white", "web black",
 }
 
-# WHAT THIS SET CAN AND CANNOT CATCH. Both sides of the comparison below live
-# in this repository, so it fires when the mirror is edited without meaning to
-# and is SILENT when upstream adds a key. It went green for eighteen days over
-# a mirror eleven keys behind. The check that sees upstream is
-# scripts/check_brand_currency.py; it is not in this suite because the suite
-# stays offline, and it is not in the gated path in --mode currency because
-# upstream moving is a queue, not a defect of this repository.
+# WHAT THIS SET CAN AND CANNOT CATCH. Both sides of the comparison with
+# WIRE_KEYS live in this repository, so it fires when the mirror is edited
+# without meaning to and is SILENT when upstream adds a key. It went green for
+# eighteen days over a mirror eleven keys behind. Since 8.12 the tests at the
+# end of this file compare the mirror with the installed register at the pin;
+# they still cannot see upstream past the pin. That is
+# scripts/check_brand_currency.py --mode currency, in a scheduled workflow that
+# gates nothing, because upstream moving is a queue, not a defect of this
+# repository.
+
+
+def differences(mine: dict[str, str], upstream: dict[str, str]) -> list[str]:
+    """Every way two vocabularies disagree, named. Empty means identical.
+
+    Values are compared exactly: the resolver returns them as they are, so a
+    change of case is a change.
+    """
+    out = [f"missing {k!r}: upstream has {upstream[k]}"
+           for k in sorted(upstream.keys() - mine.keys())]
+    out += [f"extra {k!r}: the mirror has {mine[k]}"
+            for k in sorted(mine.keys() - upstream.keys())]
+    out += [f"drift {k!r}: mirror {mine[k]}, upstream {upstream[k]}"
+            for k in sorted(mine.keys() & upstream.keys())
+            if mine[k] != upstream[k]]
+    return out
 
 
 def test_registered_values_match_the_register():
@@ -141,3 +179,130 @@ def test_the_retired_rationale_is_not_asserted_as_current():
     doc = V.__doc__ or ""
     assert "Identifiers are local by design" not in doc, (
         "the mirror still asserts a rule the register retired")
+
+
+# ==================== The register itself, at the pin (8.12) ====================
+
+
+def _register():
+    try:
+        import rnv_brand.brand as register
+    except ImportError as exc:
+        pytest.fail(
+            f"rnv-brand is not importable as rnv_brand: {exc}\n\n"
+            f"It is a declared test dependency. Install it with:\n\n"
+            f"    pip install -r tests/requirements-dev.txt\n\n"
+            f"Without it nothing in this suite compares the mirror with the "
+            f"register.")
+    return register
+
+
+def _pin() -> str:
+    match = PIN_RE.search(DEV_REQS.read_text(encoding="utf-8"))
+    assert match, "tests/requirements-dev.txt does not pin rnv-brand"
+    return match.group("ref")
+
+
+def test_the_register_is_installed_as_rnv_brand():
+    """The one the rest depend on. It fails, never skips: a skipped
+    comparison and a passing one look the same in a summary line."""
+    register = _register()
+    assert isinstance(getattr(register, "RNV_BRAND", None), dict), (
+        "rnv_brand.brand has no RNV_BRAND dict")
+
+
+def test_this_repository_still_reads_its_own_engine():
+    """rnv-brand also installs a top-level `engine` for older consumers. From
+    this repository's root the server's own package must still win; if it
+    did not, `from engine import brand_vocab` would fail for every test that
+    reads the server."""
+    import engine
+    assert pathlib.Path(engine.__file__).resolve().parent == ROOT / "engine", (
+        f"`engine` resolves to {engine.__file__}, not this repository's")
+
+
+def test_the_pin_is_a_full_commit():
+    """A branch or a tag can move under the same line. A commit cannot."""
+    pin = _pin()
+    assert re.fullmatch(r"[0-9a-f]{40}", pin), (
+        f"rnv-brand is pinned to {pin!r}, which is not a full commit ID")
+
+
+def test_the_three_pins_agree():
+    """The dev requirements, SYNCED_SHA and the mirror's docstring each name
+    the commit. Moving one without the others is the mirror claiming a
+    revision it was not checked against."""
+    doc = re.findall(r"Mirrored from rnv-brand@([0-9a-f]{40})", V.__doc__ or "")
+    assert doc, "the mirror does not record an upstream SHA"
+    assert {_pin(), SYNCED_SHA, doc[0]} == {SYNCED_SHA}, (
+        f"requirements-dev pins {_pin()[:12]}, SYNCED_SHA is "
+        f"{SYNCED_SHA[:12]}, the mirror says {doc[0][:12]}")
+
+
+def test_the_installed_register_is_the_pinned_one():
+    """The pin says which commit; pip records which one it installed (PEP 610,
+    direct_url.json). They part when the pin moves and nobody reinstalls, and
+    then the comparison below is against a revision nobody declared.
+
+    pip's record covers only what pip installed, so the module that was
+    imported must be one of that installation's recorded files, with the hash
+    pip recorded; an rnv_brand found elsewhere on sys.path, or a file edited
+    after the install, would otherwise borrow the record."""
+    import base64
+    import hashlib
+
+    register = _register()
+    dist = importlib.metadata.distribution("rnv-brand")
+    loaded = pathlib.Path(register.__file__).resolve()
+    record = next((f for f in (dist.files or [])
+                   if pathlib.Path(dist.locate_file(f)).resolve() == loaded), None)
+    assert record is not None and record.hash is not None, (
+        f"rnv_brand.brand was imported from {loaded}, which the installed "
+        f"rnv-brand distribution does not record as its file")
+    digest = base64.urlsafe_b64encode(
+        hashlib.new(record.hash.mode, loaded.read_bytes()).digest()
+    ).rstrip(b"=").decode()
+    assert digest == record.hash.value, (
+        f"{loaded} has changed since pip installed it. Run:\n\n"
+        f"    pip install --force-reinstall -r tests/requirements-dev.txt\n")
+    raw = dist.read_text("direct_url.json")
+    commit = ((json.loads(raw) if raw else {}).get("vcs_info") or {}).get(
+        "commit_id")
+    assert commit, (
+        "rnv-brand was not installed from a git commit, so nothing records "
+        "which revision is installed. Run:\n\n"
+        "    pip install -r tests/requirements-dev.txt\n")
+    assert commit == _pin(), (
+        f"tests/requirements-dev.txt pins {_pin()[:12]} but the installed "
+        f"register is {commit[:12]}. Run:\n\n"
+        f"    pip install -r tests/requirements-dev.txt\n")
+
+
+def test_the_mirror_carries_the_register_at_its_pin():
+    """The transcription check, read from the installed package instead of
+    fetched. A failure here is this repository being wrong: the mirror says
+    it carries the pinned commit and does not."""
+    register = _register()
+    found = differences(dict(V.RNV_BRAND), dict(register.RNV_BRAND))
+    for name in CONSTANTS:
+        mine, theirs = getattr(V, name), getattr(register, name, None)
+        if mine != theirs:
+            found.append(f"constant {name}: mirror {mine}, register {theirs}")
+    assert not found, (
+        "the mirror does not carry the register at its pin:\n  "
+        + "\n  ".join(found))
+
+
+def test_positive_control_the_comparison_can_fail():
+    """Without this the test above could pass by comparing nothing. Each kind
+    of disagreement is planted and must be named; two equal tables must give
+    none. If this fails, the harness is wrong, not the mirror."""
+    base = {"gold": "#d2bc93", "teal": "#00b0a0"}
+    assert differences(base, dict(base)) == []
+    assert differences({"gold": "#d2bc93"}, base) == [
+        "missing 'teal': upstream has #00b0a0"]
+    assert differences({**base, "mauve": "#e0b0ff"}, base) == [
+        "extra 'mauve': the mirror has #e0b0ff"]
+    assert differences({**base, "gold": "#D2BC93"}, base) == [
+        "drift 'gold': mirror #D2BC93, upstream #d2bc93"]
+    assert len(CONSTANTS) == 11, CONSTANTS
