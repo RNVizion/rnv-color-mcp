@@ -2,3 +2,30 @@
 pytest
 pytest-asyncio
 httpx
+
+# The brand register, installed so the mirror in engine/brand_vocab.py can be
+# compared with it (tests/test_brand_mirror.py and
+# scripts/check_brand_currency.py --mode transcription).
+#
+# PINNED TO A COMMIT, NOT A BRANCH: this line states which revision of the
+# register the mirror carries, and moving it is a diff someone can read. It
+# must name the same commit as the mirror's "Mirrored from" line and SYNCED_SHA
+# in tests/test_brand_mirror.py; a test holds the three equal.
+#
+# Installed as rnv_brand, never imported here as engine.brand: this repository
+# has its own engine package, which wins from its root. rnv-brand installs as
+# rnv_brand from 48.1.0 (ruled by Chris, 2026-11-01).
+#
+# Since Phase 8.12 (2026-11-01). Until then the transcription check fetched
+# engine/brand.py over HTTPS at the pin, and a pin GitHub stopped serving would
+# have made the deploy gate warn and deploy. A pin that cannot be installed
+# now fails the install, which fails the gate.
+#
+# THE REACH OF THAT IS WIDER THAN THE MIRROR CHECK. Every workflow job that
+# installs this file clones and builds rnv-brand at the pin: both pytest jobs,
+# the mirror job and the deploy gate. So another history rewrite in rnv-brand,
+# the repository going private, or a setuptools release that breaks its build
+# stops every pull request and every deploy until the pin moves. That is the
+# price of a gate that cannot quietly become a warning; rnv-brand's history
+# commit map is where a rewritten pin finds its new ID.
+rnv-brand @ git+https://github.com/RNVizion/rnv-brand@108213b82a4f71163ddd04b56ea15c2425de45dc
